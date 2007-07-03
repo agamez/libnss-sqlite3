@@ -8,7 +8,6 @@ AC_CONFIG_SRCDIR([utils.h])
 AC_CONFIG_HEADER([config.h])
 AC_PREFIX_DEFAULT([])
 
-
 AC_ARG_WITH(db-file,
     AC_HELP_STRING([--with-db-file],
             [Specify auth db location]),
@@ -24,6 +23,10 @@ AC_ARG_ENABLE(debug,
 
 # Checks for programs.
 AC_PROG_CC
+
+if test "x$GCC" = xyes; then
+    AC_SUBST(CFLAGS, [-02])
+fi
 AC_PROG_LIBTOOL
 
 # Checks for libraries.
