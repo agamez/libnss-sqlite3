@@ -39,10 +39,18 @@ enum nss_status _nss_sqlite_setpwent(void) {
     return NSS_STATUS_SUCCESS;
 }
 
+/*
+ * Free getpwent resources.
+ */
 enum nss_status _nss_sqlite_endpwent(void) {
     NSS_DEBUG("Finishing pw functions\n");
     return NSS_STATUS_SUCCESS;
 }
+
+/*
+ * Return next passwd entry.
+ * Not implemeted yet.
+ */
 
 enum nss_status
 _nss_sqlite_getpwent_r(struct passwd *pwbuf, char *buf,
@@ -98,6 +106,9 @@ enum nss_status _nss_sqlite_getpwnam_r(const char* name, struct passwd *pwbuf,
     return res;
 }
 
+/*
+ * Get user by UID.
+ */
 
 enum nss_status _nss_sqlite_getpwuid_r(uid_t uid, struct passwd *pwbuf,
                char *buf, size_t buflen, int *errnop) {

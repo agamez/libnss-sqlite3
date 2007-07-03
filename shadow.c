@@ -32,6 +32,10 @@
 #include <sys/types.h>
 #include <unistd.h>
 
+/*
+ * Get shadow information using username.
+ */
+
 enum nss_status _nss_sqlite_getspnam_r(const char* name, struct spwd *spbuf,
                char *buf, size_t buflen, int *errnop) {
     sqlite3 *pDb;
