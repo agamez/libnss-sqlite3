@@ -1,0 +1,46 @@
+ INSTALLATION
+===============
+
+This file explains post compilation steps. It assumes that libnss-sqlite
+is compiled and in system libraries directory (/lib).
+
+
+ 1. Create database
+--------------------
+
+libnss-sqlite use a SQLite database to provide authentication services.
+Thus the first thing you have to do is to create this DB. Its default
+path is /var/db/auth.sqlite, we'll use this here:
+
+cd libnss-sqlite
+sudo mkdir /var/db
+sudo sqlite3 -init conf/schema.sql /var/db/auth.sqlite
+
+That's all, database is ready. Of course, it's up to you to populate it!
+Currently, there is no way to customise database fields and tables' names.
+
+ 2. Configure nsswitch.conf
+----------------------------
+
+The second step is to tell glibc that we use this lib. Open /etc/nsswitch.conf
+and add sqlite at the end of the passwd, groups and shadow lines. You should
+obtain something like :
+
+# ...
+passwd:         compat sqlite
+group:          compat sqlite
+shadow:         compat sqlite
+# ...
+
+ 3. Test
+---------
+
+Insert some records into SQLite db tables, open a new shell (nsswitch.conf is
+only read when a new application is launched) and try id [user in SQLite DB].
+
+ 4. Limitations
+----------------
+
+libnss-sqlite only handle users which are in its DB. You can't have an external
+user linked to a DB stored group. This is because additional groups lookup use
+username and is quite ugly to implement.

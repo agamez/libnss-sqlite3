@@ -29,8 +29,15 @@
 #include <sqlite3.h>
 #include <string.h>
 
-int open_and_prepare(sqlite3** ppDb, struct sqlite3_stmt** ppSt, const char* sql) {
-    if(sqlite3_open(DBFILE, ppDb) != SQLITE_OK) {
+/**
+ * Open the database specified by NSS_SQLITE_DBFILE and prepare a statement.
+ * @param ppDb A pointer to a struct sqlite3* which will be initialized.
+ * @param ppSt A pointer to a struct sqlite3_stmt* which will be initialized
+ *      using sql string containing in sql.
+ * @param sql String containing SQL statement to prepare.
+ */
+int open_and_prepare(struct sqlite3** ppDb, struct sqlite3_stmt** ppSt, const char* sql) {
+    if(sqlite3_open(NSS_SQLITE_DBFILE, ppDb) != SQLITE_OK) {
         NSS_ERROR(sqlite3_errmsg(*ppDb));
         sqlite3_close(*ppDb);
         return FALSE;
@@ -44,6 +51,14 @@ int open_and_prepare(sqlite3** ppDb, struct sqlite3_stmt** ppSt, const char* sql
     }
     return TRUE;
 }
+
+/*
+ * Fetch a record from a statement and translate sqlite return code
+ * into a directly usable nss_status code.
+ * @param pDb Database handle, will be closed if something fails.
+ * @param pSt Statement to fetch from, will be finalized if something
+ *      goes wrong.
+ */
 
 enum nss_status fetch_first(struct sqlite3* pDb, struct sqlite3_stmt* pSt) {
     int res = sqlite3_step(pSt);
@@ -67,6 +82,20 @@ enum nss_status fetch_first(struct sqlite3* pDb, struct sqlite3_stmt* pSt) {
         return NSS_STATUS_UNAVAIL;
     }
 }
+
+/*
+ * Fill a group struct using given information.
+ * @param pDb Handle to a database used to fetch group's members.
+ * @param gbuf Struct which will be filled with various info.
+ * @param buf Buffer which will contain all strings pointed to by
+ *      gbuf.
+ * @param buflen Buffer length.
+ * @param name Groupname.
+ * @param pw Group password.
+ * @param gid Group ID.
+ * @param errnop Pointer to errno, will be filled if something goes
+ *      wrong.
+ */
 
 enum nss_status fill_group(struct sqlite3 *pDb, struct group *gbuf, char* buf, size_t buflen,
     const unsigned char *name, const unsigned char *pw, gid_t gid, int *errnop) {
@@ -93,6 +122,23 @@ enum nss_status fill_group(struct sqlite3 *pDb, struct group *gbuf, char* buf, s
 
     return NSS_STATUS_SUCCESS;
 }
+
+/*
+ * Fill an user struct using given information.
+ * @param pwbuf Struct which will be filled with various info.
+ * @param buf Buffer which will contain all strings pointed to by
+ *      pwbuf.
+ * @param buflen Buffer length.
+ * @param name Username.
+ * @param pw Group password.
+ * @param uid User ID.
+ * @param gid Main group ID.
+ * @param gecos Extended information (real user name).
+ * @param shell User's shell.
+ * @param homedir User's home directory.
+ * @param errnop Pointer to errno, will be filled if something goes
+ *      wrong.
+ */
 
 enum nss_status fill_passwd(struct passwd* pwbuf, char* buf, size_t buflen,
     const char* name, const char* pw, uid_t uid, gid_t gid, const char* gecos,

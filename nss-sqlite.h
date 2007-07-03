@@ -3,6 +3,12 @@
 
 #define _GNU_SOURCE
 
+#ifdef HAVE_CONFIG_H
+#include <config.h>
+#else
+#error You must use autotools to build this!
+#endif
+
 #include <nss.h>
 #include <syslog.h>
 #include <stdio.h>
@@ -19,7 +25,4 @@
 #define FALSE 0
 #define TRUE !FALSE
 
-
-/* FIXME move in a configuration file */
-#define DBFILE "/var/db/auth.sqlite"
 #endif

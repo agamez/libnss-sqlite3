@@ -10,23 +10,20 @@ AC_PREFIX_DEFAULT([])
 
 AC_ARG_WITH(db-file,
     AC_HELP_STRING([--with-db-file],
-            [Specify auth db location]),
+            [Specify auth db location, defaults to /var/db/auth.sqlite]),
     AC_DEFINE_UNQUOTED([NSS_SQLITE_DBFILE], ["$withval"], [Users' database]),
     AC_DEFINE([NSS_SQLITE_DBFILE], ["/var/db/auth.sqlite"], [Users' database]))
 
 AC_ARG_ENABLE(debug, 
     AC_HELP_STRING([--enable-debug],
             [Enable debug statements using syslog]),
-    AC_DEFINE([DEBUG], [], [Enable debugging]))
+    AC_DEFINE([DEBUG], [], [Enable debugging])
+    CFLAGS="$CFLAGS -g")
 
 
 
 # Checks for programs.
 AC_PROG_CC
-
-if test "x$GCC" = xyes; then
-    AC_SUBST(CFLAGS, [-02])
-fi
 AC_PROG_LIBTOOL
 
 # Checks for libraries.
