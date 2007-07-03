@@ -1,0 +1,11 @@
+2007-07-02 18:58  beuss
+
+	* .Makefile.in.swp, .groups.c.swp, .passwd.c.swp, .shadow.c.swp,
+	  .utils.c.swp, .utils.h.swp, Makefile, conf, conf/.schema.sql.swp,
+	  conf/schema.sql, groups.c, nss-sqlite.h, passwd.c, shadow.c,
+	  utils.c, utils.h: Initial import.
+
+2007-07-02 18:52  beuss
+
+	* branches, tags, .: Initial layout.
+
