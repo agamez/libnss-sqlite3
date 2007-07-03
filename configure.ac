@@ -6,6 +6,7 @@ AC_INIT([libnss-sqlite], [0.0.1-alpha])
 AM_INIT_AUTOMAKE
 AC_CONFIG_SRCDIR([utils.h])
 AC_CONFIG_HEADER([config.h])
+AC_PREFIX_DEFAULT([])
 
 
 AC_ARG_WITH(db-file,
