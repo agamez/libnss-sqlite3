@@ -29,7 +29,6 @@
 #include <pwd.h>
 #include <shadow.h>
 #include <string.h>
-#include <sys/types.h>
 #include <unistd.h>
 
 /**
