@@ -72,7 +72,7 @@ enum nss_status _nss_sqlite_setgrent(void) {
             NSS_ERROR("setgrent: unable to open connection\n");
             return NSS_STATUS_UNAVAIL;
         } else {
-            NSS_DEBUG("set_grent: DB connection opened, %d", (grent_data.pDb == NULL));
+            NSS_DEBUG("setgrent: DB connection opened");
         }
     }
     pthread_mutex_unlock(&grent_mutex);
@@ -83,6 +83,7 @@ enum nss_status _nss_sqlite_setgrent(void) {
  * Finalize grent functions.
  */
 enum nss_status _nss_sqlite_endgrent(void) {
+    NSS_DEBUG("endgrent: finalizing group serial access facilities\n");
     pthread_mutex_lock(&grent_mutex);
     if(grent_data.pDb != NULL) {
         sqlite3_finalize(grent_data.pSt);
@@ -128,8 +129,6 @@ _nss_sqlite_getgrent_r(struct group *gbuf, char *buf,
 
     res = fetch_first(grent_data.pDb, grent_data.pSt);
     if(res != NSS_STATUS_SUCCESS) {
-        sqlite3_finalize(grent_data.pSt);
-        sqlite3_close(grent_data.pDb);
         grent_data.pDb = NULL;
         pthread_mutex_unlock(&grent_mutex);
         return res;
@@ -289,6 +288,7 @@ _nss_sqlite_initgroups_dyn(const char *user, gid_t gid, long int *start,
         NSS_ERROR("Unable to bind gid in initgroups_dyn\n");
         sqlite3_finalize(pSt);
         sqlite3_close(pDb);
+        return NSS_STATUS_UNAVAIL;
     }
 
     res = fetch_first(pDb, pSt);
@@ -308,6 +308,8 @@ _nss_sqlite_initgroups_dyn(const char *user, gid_t gid, long int *start,
                     /* limit reached, tell caller to try with a bigger one */
                     NSS_ERROR("initgroups_dyn: limit was too low\n");
                     *errnop = ERANGE;
+                    sqlite3_finalize(pSt);
+                    sqlite3_close(pDb);
                     return NSS_STATUS_TRYAGAIN;
                 }
             } else {
@@ -358,7 +360,6 @@ enum nss_status get_users(sqlite3* pDb, gid_t gid, char* buffer, size_t buflen, 
     if(sqlite3_bind_int(pSt, 1, gid) != SQLITE_OK) {
         NSS_ERROR(sqlite3_errmsg(pDb));
         sqlite3_finalize(pSt);
-        sqlite3_close(pDb);
         return NSS_STATUS_UNAVAIL;
     }
 

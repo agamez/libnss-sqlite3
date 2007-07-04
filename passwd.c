@@ -98,10 +98,11 @@ enum nss_status _nss_sqlite_getpwnam_r(const char* name, struct passwd *pwbuf,
     gid = sqlite3_column_int(pSt, 1);
     shell = sqlite3_column_text(pSt, 2);
     homedir = sqlite3_column_text(pSt, 3);
+    res = fill_passwd(pwbuf, buf, buflen, name, "x", uid, gid, "", shell, homedir, errnop);
+
     sqlite3_finalize(pSt);
     sqlite3_close(pDb);
 
-    res = fill_passwd(pwbuf, buf, buflen, name, "x", uid, gid, "", shell, homedir, errnop);
     NSS_DEBUG("Look successfull !\n");
     return res;
 }

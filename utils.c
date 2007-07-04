@@ -102,6 +102,7 @@ enum nss_status fill_group(struct sqlite3 *pDb, struct group *gbuf, char* buf, s
     int name_length = strlen((char*)name) + 1;
     int pw_length = strlen((char*)pw) + 1;
     int total_length = name_length + pw_length;
+    int res;
 
     if(buflen < total_length) {
         *errnop = ERANGE;
@@ -117,10 +118,12 @@ enum nss_status fill_group(struct sqlite3 *pDb, struct group *gbuf, char* buf, s
     buf += pw_length;
 
     /* We have a group, we now need to fetch its users */
-    get_users(pDb, gbuf->gr_gid, buf, buflen - total_length, errnop);
-    gbuf->gr_mem = (char**)buf;
+    res = get_users(pDb, gbuf->gr_gid, buf, buflen - total_length, errnop);
+    if(res == NSS_STATUS_SUCCESS) {
+        gbuf->gr_mem = (char**)buf;
+    }
 
-    return NSS_STATUS_SUCCESS;
+    return res;
 }
 
 /*
