@@ -29,15 +29,14 @@
 #include <sqlite3.h>
 #include <string.h>
 
+
 /**
- * Open the database specified by NSS_SQLITE_DBFILE and prepare a statement.
- * @param ppDb A pointer to a struct sqlite3* which will be initialized.
- * @param ppSt A pointer to a struct sqlite3_stmt* which will be initialized
- *      using sql string containing in sql.
- * @param sql String containing SQL statement to prepare.
+ * Internal function.
+ * Open the given db file and prepare a statement.
  */
-int open_and_prepare(struct sqlite3** ppDb, struct sqlite3_stmt** ppSt, const char* sql) {
-    if(sqlite3_open(NSS_SQLITE_DBFILE, ppDb) != SQLITE_OK) {
+int
+_open_and_prepare(struct sqlite3** ppDb, struct sqlite3_stmt** ppSt, const char* sql, const char* file) {
+    if(sqlite3_open(file, ppDb) != SQLITE_OK) {
         NSS_ERROR(sqlite3_errmsg(*ppDb));
         sqlite3_close(*ppDb);
         return FALSE;
@@ -50,6 +49,29 @@ int open_and_prepare(struct sqlite3** ppDb, struct sqlite3_stmt** ppSt, const ch
         return FALSE;
     }
     return TRUE;
+}
+
+/**
+ * Open the database specified by NSS_SQLITE_PASSWD_DB and prepare a statement.
+ * @param ppDb A pointer to a struct sqlite3* which will be initialized.
+ * @param ppSt A pointer to a struct sqlite3_stmt* which will be initialized
+ *      using sql string containing in sql.
+ * @param sql String containing SQL statement to prepare.
+ */
+int open_and_prepare(struct sqlite3** ppDb, struct sqlite3_stmt** ppSt, const char* sql) {
+    return _open_and_prepare(ppDb, ppSt, sql, NSS_SQLITE_PASSWD_DB);
+}
+
+/**
+ * Open the database specified by NSS_SQLITE_SHADOW_DBFILE (the one containing
+ * shadow records) and prepare a statement.
+ * @param ppDb A pointer to a struct sqlite3* which will be initialized.
+ * @param ppSt A pointer to a struct sqlite3_stmt* which will be initialized
+ *      using sql string containing in sql.
+ * @param sql String containing SQL statement to prepare.
+ */
+int open_and_prepare_sp(struct sqlite3** ppDb, struct sqlite3_stmt** ppSt, const char* sql) {
+    return _open_and_prepare(ppDb, ppSt, sql, NSS_SQLITE_SHADOW_DB);
 }
 
 /*

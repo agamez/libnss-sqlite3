@@ -27,7 +27,6 @@
 #include <grp.h>
 #include <malloc.h>
 #include <pwd.h>
-#include <shadow.h>
 #include <string.h>
 #include <unistd.h>
 
@@ -71,7 +70,7 @@ enum nss_status _nss_sqlite_getpwnam_r(const char* name, struct passwd *pwbuf,
     int res;
     uid_t uid;
     gid_t gid;
-    const char* sql = "SELECT uid, gid, shell, homedir FROM shadow WHERE username = ?";
+    const char* sql = "SELECT uid, gid, shell, homedir FROM passwd WHERE username = ?";
     const char* shell;
     const char* homedir;
 
@@ -120,7 +119,7 @@ enum nss_status _nss_sqlite_getpwuid_r(uid_t uid, struct passwd *pwbuf,
     const unsigned char *name;
     const unsigned char *shell;
     const unsigned char *homedir;
-    const char *sql = "SELECT username, gid, shell, homedir FROM shadow WHERE uid = ?";
+    const char *sql = "SELECT username, gid, shell, homedir FROM passwd WHERE uid = ?";
 
     NSS_DEBUG("getpwuid_r: looking for user #%d\n", uid);
 

@@ -269,7 +269,7 @@ _nss_sqlite_initgroups_dyn(const char *user, gid_t gid, long int *start,
                                                     int *errnop) {
     sqlite3 *pDb;
     struct sqlite3_stmt *pSt;
-    const char* sql = "SELECT ug.gid FROM user_group ug INNER JOIN shadow s ON s.uid = ug.uid WHERE s.username = ? AND ug.gid != ?";
+    const char* sql = "SELECT ug.gid FROM user_group ug INNER JOIN passwd p ON p.uid = ug.uid WHERE p.username = ? AND ug.gid != ?";
     int res;
     NSS_DEBUG("initgroups_dyn: filling groups for user : %s, main gid : %d\n", user, gid);
 
@@ -344,7 +344,7 @@ _nss_sqlite_initgroups_dyn(const char *user, gid_t gid, long int *start,
 enum nss_status get_users(sqlite3* pDb, gid_t gid, char* buffer, size_t buflen, int* errnop) {
     struct sqlite3_stmt *pSt;
     int res, msize = 20, mcount = 0, i, ptr_area_size;
-    const char* sql = "SELECT username FROM shadow u INNER JOIN user_group ug ON ug.uid = u.uid WHERE ug.gid = ?";
+    const char* sql = "SELECT username FROM passwd u INNER JOIN user_group ug ON ug.uid = u.uid WHERE ug.gid = ?";
     char* next_member;
     char **members;
     char **ptr_area = (char**)buffer;

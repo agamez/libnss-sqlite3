@@ -49,7 +49,7 @@ enum nss_status _nss_sqlite_getspnam_r(const char* name, struct spwd *spbuf,
     NSS_DEBUG("getspnam_r: looking for user %s (shadow)\n", name);
 
 
-    if(!open_and_prepare(&pDb, &pSt, sql)) {
+    if(!open_and_prepare_sp(&pDb, &pSt, sql)) {
         return NSS_STATUS_UNAVAIL;
     }
 

@@ -28,8 +28,13 @@ sudo make install
 
 Generated libraries will be placed in /lib. You can overwrite this setting
 by passing --libdir or --prefix to configure.
-You can specify an alternative DB pass using --with-db-file=/path/to/auth.file
-(defaults to /var/db/auth.sqlite).
+
+Since version 0.2, libnss-sqlite can use two different files. One should be
+world readable, and can be specified through --with-passwd-db=/path/to/passwd,
+it will contain general users information (uid, name) and groups and defaults
+to /var/db/passwd.sqlite. The second should be accessible to root only, it can
+be specified through --with-shadow-db=/path/to/shadow, it will contain users'
+passwords and defaults to /var/db/shadow.sqlite.
 
  3. Configuration
 ------------------

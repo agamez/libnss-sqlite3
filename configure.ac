@@ -8,11 +8,20 @@ AC_CONFIG_SRCDIR([utils.h])
 AC_CONFIG_HEADER([config.h])
 AC_PREFIX_DEFAULT([])
 
-AC_ARG_WITH(db-file,
-    AC_HELP_STRING([--with-db-file],
-            [Specify auth db location, defaults to /var/db/auth.sqlite]),
-    AC_DEFINE_UNQUOTED([NSS_SQLITE_DBFILE], ["$withval"], [Users' database]),
-    AC_DEFINE([NSS_SQLITE_DBFILE], ["/var/db/auth.sqlite"], [Users' database]))
+AC_ARG_WITH(passwd-db,
+    AC_HELP_STRING([--with-passwd-db],
+            [Specify users' db location, defaults to /var/db/passwd.sqlite]),
+    AC_DEFINE_UNQUOTED([NSS_SQLITE_PASSWD_DB], ["$withval"], [Users' database]),
+    AC_DEFINE([NSS_SQLITE_PASSWD_DB], ["/var/db/passwd.sqlite"], [Users' database]))
+
+AC_ARG_WITH(shadow-db,
+    AC_HELP_STRING([--with-shadow-db],
+            [Specify shadow db location (containing users' passwords), defaults 
+    to /var/db/shadow.sqlite]),
+    AC_DEFINE_UNQUOTED([NSS_SQLITE_SHADOW_DB], ["$withval"], [Shadow database]),
+    AC_DEFINE([NSS_SQLITE_SHADOW_DB], ["/var/db/shadow.sqlite"], [Shadow database]))
+
+
 
 AC_ARG_ENABLE(debug, 
     AC_HELP_STRING([--enable-debug],

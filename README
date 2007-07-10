@@ -8,15 +8,19 @@ is compiled and in system libraries directory (/lib).
  1. Create database
 --------------------
 
-libnss-sqlite use a SQLite database to provide authentication services.
-Thus the first thing you have to do is to create this DB. Its default
-path is /var/db/auth.sqlite, we'll use this here:
+libnss-sqlite use two SQLite databases to provide authentication services.
+Thus the first thing you have to do is to create these DB. Depending on your
+sources configuration, you may use one or two DB (--with-passwd-db &
+--with-shadow-db switches). Default configuration uses 2 databases:
+/var/db/passwd.sqlite and /var/db/shadow.sqlite, we'll use these here:
 
 cd libnss-sqlite
 sudo mkdir /var/db
-sudo sqlite3 -init conf/schema.sql /var/db/auth.sqlite
+sudo sqlite3 -init conf/passwd.sql /var/db/passwd.sqlite
+sudo sqlite3 -init conf/shadow.sql /var/db/shadow.sqlite
+sudo chmod o-r /var/db/shadow.sqlite
 
-That's all, database is ready. Of course, it's up to you to populate it!
+That's all, databases are ready. Of course, it's up to you to populate them!
 Currently, there is no way to customise database fields and tables' names.
 
  2. Configure nsswitch.conf

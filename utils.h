@@ -24,6 +24,7 @@
 #include <pwd.h>
 
 int open_and_prepare(sqlite3**, struct sqlite3_stmt**, const char*);
+int open_and_prepare_sp(sqlite3**, struct sqlite3_stmt**, const char*);
 int fetch_first(struct sqlite3*, struct sqlite3_stmt*);
 enum nss_status fill_passwd(struct passwd*, char*, size_t, const char*,
     const char*, uid_t, gid_t, const char*, const char*, const char*, int*);

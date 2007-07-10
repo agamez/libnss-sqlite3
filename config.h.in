@@ -75,7 +75,10 @@
 #undef HAVE_UNISTD_H
 
 /* Users' database */
-#undef NSS_SQLITE_DBFILE
+#undef NSS_SQLITE_PASSWD_DB
+
+/* Shadow database */
+#undef NSS_SQLITE_SHADOW_DB
 
 /* Name of package */
 #undef PACKAGE
