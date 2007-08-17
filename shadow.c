@@ -78,6 +78,12 @@ enum nss_status _nss_sqlite_getspnam_r(const char* name, struct spwd *spbuf,
     buf += name_length;
     strcpy(buf, pw);
     spbuf->sp_pwdp = buf;
+    spbuf->sp_lstchg = -1;
+    spbuf->sp_min = -1;
+    spbuf->sp_max = -1;
+    spbuf->sp_warn = -1;
+    spbuf->sp_inact = -1;
+    spbuf->sp_expire = -1;
     sqlite3_finalize(pSt);
     sqlite3_close(pDb);
 
