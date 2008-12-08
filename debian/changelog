@@ -1,0 +1,6 @@
+libnss-sqlite (0.2) unstable; urgency=low
+
+  * Initial Release.
+
+ -- Sébastien Le Ray <sebastien-sqlite@orniz.org>  Mon, 08 Dec 2008 17:24:32 +0100
+

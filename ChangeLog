@@ -1,3 +1,75 @@
+2007-08-17 17:32  beuss
+
+	* AUTHORS, conf/shadow.sql, shadow.c: Integrating Sylvain Rochet's
+	  patches to ensure uniqueness of username in
+	  shadow table and proper structure initialization.
+
+2007-07-10 19:11  beuss
+
+	* INSTALL, README, conf/passwd.sql, conf/schema.sql,
+	  conf/shadow.sql, config.h.in, configure.ac, groups.c, passwd.c,
+	  shadow.c, utils.c, utils.h: Splitted DB in two files to allow
+	  access control on shadow information.
+
+2007-07-04 21:29  beuss
+
+	* groups.c, passwd.c, utils.c: Added some missing finalize/close.
+	  Removed some double or too early finalize/close.
+
+2007-07-03 13:40  beuss
+
+	* configure.ac: Updated version string.
+
+2007-07-03 13:13  beuss
+
+	* passwd.c, shadow.c: Finished first source documentation.
+
+2007-07-03 12:58  beuss
+
+	* INSTALL, README, configure.ac, nss-sqlite.h, utils.c: Added some
+	  document (source, installation, configuration).
+	  Removed CFLAGS stuff from configure.ac, it seems that it is not a
+	  good thing to do.
+
+2007-07-03 09:16  beuss
+
+	* configure.ac: Modified configure.ac to remove -g from CFLAGS.
+
+2007-07-03 08:58  beuss
+
+	* Makefile.am: Modified Makefile.am to allow make dist to cleanly
+	  build.
+
+2007-07-03 08:49  beuss
+
+	* bootstrap.sh, configure.ac: Added bootstrap script to prepare
+	  build system.
+	  Modified default prefix to install lib in /lib
+
+2007-07-03 08:27  beuss
+
+	* Makefile: Makefile is no more necessary.
+
+2007-07-03 08:26  beuss
+
+	* AUTHORS, COPYING, ChangeLog, INSTALL, Makefile, Makefile.am,
+	  NEWS, README, config.h.in, configure.ac: Added autotools stuff.
+
+2007-07-03 08:23  beuss
+
+	* conf/schema.sql: Added indices on user_group. Speed up is awesone
+	  (7min lookup with several thousands of groups vs 1 second).
+
+2007-07-03 08:22  beuss
+
+	* passwd.c: Removed unused include.
+
+2007-07-02 19:02  beuss
+
+	* .Makefile.in.swp, .groups.c.swp, .passwd.c.swp, .shadow.c.swp,
+	  .utils.c.swp, .utils.h.swp, conf/.schema.sql.swp: Removed vim
+	  swap files.
+
 2007-07-02 18:58  beuss
 
 	* .Makefile.in.swp, .groups.c.swp, .passwd.c.swp, .shadow.c.swp,
@@ -7,5 +79,5 @@
 
 2007-07-02 18:52  beuss
 
-	* branches, tags, .: Initial layout.
+	* .: Initial layout.
 

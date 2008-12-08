@@ -1,0 +1,15 @@
+Source: libnss-sqlite
+Section: admin
+Priority: optional
+Maintainer: Sébastien Le Ray <sebastien-sqlite@orniz.org>
+Build-Depends: debhelper (>= 7), autotools-dev
+Standards-Version: 3.8.0
+Homepage: http://libnss-sqlite.tuxfamily.org
+
+Package: libnss-sqlite
+Architecture: any
+Depends: ${shlibs:Depends}, ${misc:Depends}
+Description: NSS module for SQLite
+ This package provides a Name Service Switch module that allows you
+ to store users in a SQLite databased.
+
