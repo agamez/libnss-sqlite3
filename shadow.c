@@ -39,52 +39,57 @@
 enum nss_status _nss_sqlite_getspnam_r(const char* name, struct spwd *spbuf,
                char *buf, size_t buflen, int *errnop) {
     sqlite3 *pDb;
-    int name_length;
-    int pw_length;
     const unsigned char* pw;
-    struct sqlite3_stmt* pSt;
+    struct sqlite3_stmt* pSquery;
     int res;
-    const char* sql = "SELECT passwd FROM shadow WHERE username = ?";
+    char* query;
 
     NSS_DEBUG("getspnam_r: looking for user %s (shadow)\n", name);
 
-
-    if(!open_and_prepare_sp(&pDb, &pSt, sql)) {
-        return NSS_STATUS_UNAVAIL;
-    }
-
-    if(sqlite3_bind_text(pSt, 1, name, -1, SQLITE_STATIC) != SQLITE_OK) {
-        NSS_DEBUG(sqlite3_errmsg(pDb));
-        sqlite3_finalize(pSt);
+    if(sqlite3_open(NSS_SQLITE_SHADOW_DB, &pDb) != SQLITE_OK) {
+        NSS_ERROR(sqlite3_errmsg(pDb));
         sqlite3_close(pDb);
         return NSS_STATUS_UNAVAIL;
     }
 
-    res = fetch_first(pDb, pSt);
+    if(!(query = get_query(pDb, "getspnam_r")) ) {
+        NSS_ERROR(sqlite3_errmsg(pDb));
+        sqlite3_close(pDb);
+        return NSS_STATUS_UNAVAIL;
+    }
+
+
+    if(sqlite3_prepare(pDb, query, strlen(query), &pSquery, NULL) != SQLITE_OK) {
+        NSS_ERROR(sqlite3_errmsg(pDb));
+        free(query);
+        sqlite3_finalize(pSquery);
+        sqlite3_close(pDb);
+        return FALSE;
+    }
+
+    if(sqlite3_bind_text(pSquery, 1, name, -1, SQLITE_STATIC) != SQLITE_OK) {
+        NSS_DEBUG(sqlite3_errmsg(pDb));
+        free(query);
+        sqlite3_finalize(pSquery);
+        sqlite3_close(pDb);
+        return NSS_STATUS_UNAVAIL;
+    }
+
+
+    res = res2nss_status(sqlite3_step(pSquery), pDb, pSquery);
     if(res != NSS_STATUS_SUCCESS) {
+        free(query);
         return res;
     }
-    
+
+
     /* SQLITE_ROW was returned, fetch data */
-    pw = sqlite3_column_text(pSt, 0);
-    name_length = strlen(name) + 1;
-    pw_length = strlen(pw) + 1;
-    if(buflen < name_length + pw_length) {
-        *errnop = ERANGE;
-        return NSS_STATUS_TRYAGAIN;
-    }
-    strcpy(buf, name);
-    spbuf->sp_namp = buf;
-    buf += name_length;
-    strcpy(buf, pw);
-    spbuf->sp_pwdp = buf;
-    spbuf->sp_lstchg = -1;
-    spbuf->sp_min = -1;
-    spbuf->sp_max = -1;
-    spbuf->sp_warn = -1;
-    spbuf->sp_inact = -1;
-    spbuf->sp_expire = -1;
-    sqlite3_finalize(pSt);
+    pw = sqlite3_column_text(pSquery, 0);
+
+    fill_shadow(spbuf, buf, buflen, name, pw, -1, -1, -1, -1, -1, -1, errnop);
+
+    free(query);
+    sqlite3_finalize(pSquery);
     sqlite3_close(pDb);
 
     return NSS_STATUS_SUCCESS;

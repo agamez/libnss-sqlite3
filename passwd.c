@@ -66,40 +66,59 @@ _nss_sqlite_getpwent_r(struct passwd *pwbuf, char *buf,
 enum nss_status _nss_sqlite_getpwnam_r(const char* name, struct passwd *pwbuf,
                char *buf, size_t buflen, int *errnop) {
     sqlite3 *pDb;
-    struct sqlite3_stmt* pSt;
+    struct sqlite3_stmt* pSquery;
     int res;
     uid_t uid;
     gid_t gid;
-    const char* sql = "SELECT uid, gid, shell, homedir FROM passwd WHERE username = ?";
+    char* query;
     const char* shell;
     const char* homedir;
 
     NSS_DEBUG("getpwnam_r: Looking for user %s\n", name);
 
-    if(!open_and_prepare(&pDb, &pSt, sql)) {
-        return NSS_STATUS_UNAVAIL;
-    }
-
-    if(sqlite3_bind_text(pSt, 1, name, -1, SQLITE_STATIC) != SQLITE_OK) {
-        NSS_DEBUG(sqlite3_errmsg(pDb));
-        sqlite3_finalize(pSt);
+    if(sqlite3_open(NSS_SQLITE_PASSWD_DB, &pDb) != SQLITE_OK) {
+        NSS_ERROR(sqlite3_errmsg(pDb));
         sqlite3_close(pDb);
         return NSS_STATUS_UNAVAIL;
     }
 
-    res = fetch_first(pDb, pSt);
+    if(!(query = get_query(pDb, "getpwnam_r")) ) {
+        NSS_ERROR(sqlite3_errmsg(pDb));
+        sqlite3_close(pDb);
+        return NSS_STATUS_UNAVAIL;
+    }
+
+    if(sqlite3_prepare(pDb, query, strlen(query), &pSquery, NULL) != SQLITE_OK) {
+        NSS_ERROR(sqlite3_errmsg(pDb));
+        free(query);
+        sqlite3_finalize(pSquery);
+        sqlite3_close(pDb);
+        return FALSE;
+    }
+
+    if(sqlite3_bind_text(pSquery, 1, name, -1, SQLITE_STATIC) != SQLITE_OK) {
+        NSS_DEBUG(sqlite3_errmsg(pDb));
+        free(query);
+        sqlite3_finalize(pSquery);
+        sqlite3_close(pDb);
+        return NSS_STATUS_UNAVAIL;
+    }
+
+    res = res2nss_status(sqlite3_step(pSquery), pDb, pSquery);
     if(res != NSS_STATUS_SUCCESS) {
+        free(query);
         return res;
     }
 
     /* SQLITE_ROW was returned, fetch data */
-    uid = sqlite3_column_int(pSt, 0);
-    gid = sqlite3_column_int(pSt, 1);
-    shell = sqlite3_column_text(pSt, 2);
-    homedir = sqlite3_column_text(pSt, 3);
+    uid = sqlite3_column_int(pSquery, 0);
+    gid = sqlite3_column_int(pSquery, 1);
+    shell = sqlite3_column_text(pSquery, 2);
+    homedir = sqlite3_column_text(pSquery, 3);
     res = fill_passwd(pwbuf, buf, buflen, name, "x", uid, gid, "", shell, homedir, errnop);
 
-    sqlite3_finalize(pSt);
+    free(query);
+    sqlite3_finalize(pSquery);
     sqlite3_close(pDb);
 
     NSS_DEBUG("Look successfull !\n");
@@ -113,57 +132,63 @@ enum nss_status _nss_sqlite_getpwnam_r(const char* name, struct passwd *pwbuf,
 enum nss_status _nss_sqlite_getpwuid_r(uid_t uid, struct passwd *pwbuf,
                char *buf, size_t buflen, int *errnop) {
     sqlite3 *pDb;
-    struct sqlite3_stmt* pSt;
-    int res;
+    struct sqlite3_stmt* pSquery;
+    int res, nss_res;
     gid_t gid;
     const unsigned char *name;
     const unsigned char *shell;
     const unsigned char *homedir;
-    const char *sql = "SELECT username, gid, shell, homedir FROM passwd WHERE uid = ?";
+    char* query;
 
     NSS_DEBUG("getpwuid_r: looking for user #%d\n", uid);
 
-    if(!open_and_prepare(&pDb, &pSt, sql)) {
-        return NSS_STATUS_UNAVAIL;
-    }
-
-    if(sqlite3_bind_int(pSt, 1, uid) != SQLITE_OK) {
-        NSS_DEBUG(sqlite3_errmsg(pDb));
-        sqlite3_finalize(pSt);
+    if(sqlite3_open(NSS_SQLITE_PASSWD_DB, &pDb) != SQLITE_OK) {
+        NSS_ERROR(sqlite3_errmsg(pDb));
         sqlite3_close(pDb);
         return NSS_STATUS_UNAVAIL;
     }
 
-    res = sqlite3_step(pSt);
-
-    switch(res) {
-        /* Something was wrong with locks, try again later. */
-        case SQLITE_BUSY:
-            sqlite3_finalize(pSt);
-            sqlite3_close(pDb);
-        return NSS_STATUS_TRYAGAIN;
-        /* No row returned (?) */
-        case SQLITE_DONE:
-            sqlite3_finalize(pSt);
-            sqlite3_close(pDb);
-        return NSS_STATUS_NOTFOUND;
-        case SQLITE_ROW:
-        break;
-        default:
-            sqlite3_finalize(pSt);
-            sqlite3_close(pDb);
+    if(!(query = get_query(pDb, "getpwuid_r")) ) {
+        NSS_ERROR(sqlite3_errmsg(pDb));
+        sqlite3_close(pDb);
         return NSS_STATUS_UNAVAIL;
     }
 
-    name = sqlite3_column_text(pSt, 0);
-    gid = sqlite3_column_int(pSt, 1);
-    shell = sqlite3_column_text(pSt, 2);
-    homedir = sqlite3_column_text(pSt, 3);
 
-    fill_passwd(pwbuf, buf, buflen, name, "*", uid, gid, "",
-            shell, homedir, errnop);
+    if(sqlite3_prepare(pDb, query, strlen(query), &pSquery, NULL) != SQLITE_OK) {
+        NSS_ERROR(sqlite3_errmsg(pDb));
+        free(query);
+        sqlite3_finalize(pSquery);
+        sqlite3_close(pDb);
+        return FALSE;
+    }
+
+    if(sqlite3_bind_int(pSquery, 1, uid) != SQLITE_OK) {
+        NSS_DEBUG(sqlite3_errmsg(pDb));
+        free(query);
+        sqlite3_finalize(pSquery);
+        sqlite3_close(pDb);
+        return NSS_STATUS_UNAVAIL;
+    }
+
+
+    res = sqlite3_step(pSquery);
+    nss_res = res2nss_status(res, pDb, pSquery);
+    if(nss_res != NSS_STATUS_SUCCESS) {
+        free(query);
+        return nss_res;
+    }
+
+
+    name = sqlite3_column_text(pSquery, 0);
+    gid = sqlite3_column_int(pSquery, 1);
+    shell = sqlite3_column_text(pSquery, 2);
+    homedir = sqlite3_column_text(pSquery, 3);
+
+    fill_passwd(pwbuf, buf, buflen, name, "x", uid, gid, "", shell, homedir, errnop);
    
-    sqlite3_finalize(pSt);
+    free(query);
+    sqlite3_finalize(pSquery);
     sqlite3_close(pDb);
 
     return NSS_STATUS_SUCCESS;

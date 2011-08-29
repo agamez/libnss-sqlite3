@@ -68,11 +68,15 @@ enum nss_status _nss_sqlite_setgrent(void) {
     pthread_mutex_lock(&grent_mutex);
     if(grent_data.pDb == NULL) {
         NSS_DEBUG("setgrent: opening DB connection\n");
-        if(!open_and_prepare(&grent_data.pDb, &grent_data.pSt, sql)) {
-            NSS_ERROR("setgrent: unable to open connection\n");
+        if(sqlite3_open(NSS_SQLITE_PASSWD_DB, &grent_data.pDb) != SQLITE_OK) {
+            NSS_ERROR(sqlite3_errmsg(grent_data.pDb));
             return NSS_STATUS_UNAVAIL;
-        } else {
-            NSS_DEBUG("setgrent: DB connection opened");
+        }
+        if(sqlite3_prepare(grent_data.pDb, sql, -1, &grent_data.pSt, NULL) != SQLITE_OK) {
+            NSS_ERROR(sqlite3_errmsg(grent_data.pDb));
+            sqlite3_finalize(grent_data.pSt);
+            sqlite3_close(grent_data.pDb);
+            return NSS_STATUS_UNAVAIL;
         }
     }
     pthread_mutex_unlock(&grent_mutex);
@@ -127,7 +131,7 @@ _nss_sqlite_getgrent_r(struct group *gbuf, char *buf,
         }
     }
 
-    res = fetch_first(grent_data.pDb, grent_data.pSt);
+    res = res2nss_status(sqlite3_step(grent_data.pSt), grent_data.pDb, grent_data.pSt);
     if(res != NSS_STATUS_SUCCESS) {
         grent_data.pDb = NULL;
         pthread_mutex_unlock(&grent_mutex);
@@ -174,7 +178,16 @@ _nss_sqlite_getgrnam_r(const char* name, struct group *gbuf,
 
     NSS_DEBUG("getgrnam_r : looking for group %s\n", name);
 
-    if(!open_and_prepare(&pDb, &pSt, sql)) {
+    if(sqlite3_open(NSS_SQLITE_PASSWD_DB, &pDb) != SQLITE_OK) {
+        NSS_ERROR(sqlite3_errmsg(pDb));
+        sqlite3_close(pDb);
+        return NSS_STATUS_UNAVAIL;
+    }
+
+    if(sqlite3_prepare(pDb, sql, -1, &pSt, NULL) != SQLITE_OK) {
+        NSS_ERROR(sqlite3_errmsg(pDb));
+        sqlite3_finalize(pSt);
+        sqlite3_close(pDb);
         return NSS_STATUS_UNAVAIL;
     }
 
@@ -185,7 +198,7 @@ _nss_sqlite_getgrnam_r(const char* name, struct group *gbuf,
         return NSS_STATUS_UNAVAIL;
     }
 
-    res = fetch_first(pDb, pSt);
+    res = res2nss_status(sqlite3_step(pSt), pDb, pSt);
     if(res != NSS_STATUS_SUCCESS) {
         return res;
     }
@@ -222,7 +235,16 @@ _nss_sqlite_getgrgid_r(gid_t gid, struct group *gbuf,
 
     NSS_DEBUG("getgrgid_r : looking for group #%d\n", gid);
 
-    if(!open_and_prepare(&pDb, &pSt, sql)) {
+    if(sqlite3_open(NSS_SQLITE_PASSWD_DB, &pDb) != SQLITE_OK) {
+        NSS_ERROR(sqlite3_errmsg(pDb));
+        sqlite3_close(pDb);
+        return NSS_STATUS_UNAVAIL;
+    }
+
+    if(sqlite3_prepare(pDb, sql, -1, &pSt, NULL) != SQLITE_OK) {
+        NSS_ERROR(sqlite3_errmsg(pDb));
+        sqlite3_finalize(pSt);
+        sqlite3_close(pDb);
         return NSS_STATUS_UNAVAIL;
     }
 
@@ -233,7 +255,7 @@ _nss_sqlite_getgrgid_r(gid_t gid, struct group *gbuf,
         return NSS_STATUS_UNAVAIL;
     }
 
-    res = fetch_first(pDb, pSt);
+    res = res2nss_status(sqlite3_step(pSt), pDb, pSt);
     if(res != NSS_STATUS_SUCCESS) {
         return res;
     }
@@ -273,7 +295,16 @@ _nss_sqlite_initgroups_dyn(const char *user, gid_t gid, long int *start,
     int res;
     NSS_DEBUG("initgroups_dyn: filling groups for user : %s, main gid : %d\n", user, gid);
 
-    if(!open_and_prepare(&pDb, &pSt, sql)) {
+    if(sqlite3_open(NSS_SQLITE_PASSWD_DB, &pDb) != SQLITE_OK) {
+        NSS_ERROR(sqlite3_errmsg(pDb));
+        sqlite3_close(pDb);
+        return NSS_STATUS_UNAVAIL;
+    }
+
+    if(sqlite3_prepare(pDb, sql, -1, &pSt, NULL) != SQLITE_OK) {
+        NSS_ERROR(sqlite3_errmsg(pDb));
+        sqlite3_finalize(pSt);
+        sqlite3_close(pDb);
         return NSS_STATUS_UNAVAIL;
     }
 
@@ -291,7 +322,7 @@ _nss_sqlite_initgroups_dyn(const char *user, gid_t gid, long int *start,
         return NSS_STATUS_UNAVAIL;
     }
 
-    res = fetch_first(pDb, pSt);
+    res = res2nss_status(sqlite3_step(pSt), pDb, pSt);
     if(res != NSS_STATUS_SUCCESS) {
         return res;
     }

@@ -8,3 +8,4 @@ CREATE INDEX idx_ug_gid ON user_group(gid);
 CREATE TABLE groups(gid INTEGER PRIMARY KEY, groupname TEXT NOT NULL, passwd TEXT NOT NULL DEFAULT '');
 CREATE INDEX idx_groupname ON groups(groupname);
 
+CREATE TABLE queries(name TEXT PRIMARY KEY, query TEXT NOT NULL);

@@ -26,78 +26,71 @@
 #include <grp.h>
 #include <malloc.h>
 #include <pwd.h>
+#include <shadow.h>
 #include <sqlite3.h>
 #include <string.h>
 
 
-/**
- * Internal function.
- * Open the given db file and prepare a statement.
+/* Query the DB itself for the SQL query that is needed to resolve the call to getent function
+ * @param pDb Database handle, will be closed if something fails.
+ * @param getent_function The name of the getent function for which SQL statement is going to be retrieved.
  */
-int
-_open_and_prepare(struct sqlite3** ppDb, struct sqlite3_stmt** ppSt, const char* sql, const char* file) {
-    if(sqlite3_open(file, ppDb) != SQLITE_OK) {
-        NSS_ERROR(sqlite3_errmsg(*ppDb));
-        sqlite3_close(*ppDb);
-        return FALSE;
+char *get_query(struct sqlite3* pDb, char *getent_function) {
+    struct sqlite3_stmt* pSsql;
+    const char* sql = "SELECT query FROM queries WHERE name = ?";
+    char *query;
+    int res;
+
+    if(sqlite3_prepare(pDb, sql, -1, &pSsql, NULL) != SQLITE_OK) {
+        NSS_ERROR(sqlite3_errmsg(pDb));
+        sqlite3_finalize(pSsql);
+        sqlite3_close(pDb);
+        return NULL;
     }
 
-    if(sqlite3_prepare(*ppDb, sql, strlen(sql), ppSt, NULL) != SQLITE_OK) {
-        NSS_ERROR(sqlite3_errmsg(*ppDb));
-        sqlite3_finalize(*ppSt);
-        sqlite3_close(*ppDb);
-        return FALSE;
+    if(sqlite3_bind_text(pSsql, 1, getent_function, -1, SQLITE_STATIC) != SQLITE_OK) {
+        NSS_DEBUG(sqlite3_errmsg(pDb));
+        sqlite3_finalize(pSsql);
+        sqlite3_close(pDb);
+        return NULL;
     }
-    return TRUE;
-}
 
-/**
- * Open the database specified by NSS_SQLITE_PASSWD_DB and prepare a statement.
- * @param ppDb A pointer to a struct sqlite3* which will be initialized.
- * @param ppSt A pointer to a struct sqlite3_stmt* which will be initialized
- *      using sql string containing in sql.
- * @param sql String containing SQL statement to prepare.
- */
-int open_and_prepare(struct sqlite3** ppDb, struct sqlite3_stmt** ppSt, const char* sql) {
-    return _open_and_prepare(ppDb, ppSt, sql, NSS_SQLITE_PASSWD_DB);
-}
+    res = res2nss_status(sqlite3_step(pSsql), pDb, pSsql);
+    if(res != NSS_STATUS_SUCCESS) {
+        sqlite3_finalize(pSsql);
+        sqlite3_close(pDb);
+        return NULL;
+    }
 
-/**
- * Open the database specified by NSS_SQLITE_SHADOW_DBFILE (the one containing
- * shadow records) and prepare a statement.
- * @param ppDb A pointer to a struct sqlite3* which will be initialized.
- * @param ppSt A pointer to a struct sqlite3_stmt* which will be initialized
- *      using sql string containing in sql.
- * @param sql String containing SQL statement to prepare.
- */
-int open_and_prepare_sp(struct sqlite3** ppDb, struct sqlite3_stmt** ppSt, const char* sql) {
-    return _open_and_prepare(ppDb, ppSt, sql, NSS_SQLITE_SHADOW_DB);
+    query = strdup(sqlite3_column_text(pSsql, 0));
+    sqlite3_finalize(pSsql);
+    return query;
 }
 
 /*
- * Fetch a record from a statement and translate sqlite return code
- * into a directly usable nss_status code.
+ * Translate sqlite return code into a directly usable nss_status code.
  * @param pDb Database handle, will be closed if something fails.
  * @param pSt Statement to fetch from, will be finalized if something
  *      goes wrong.
  */
 
-enum nss_status fetch_first(struct sqlite3* pDb, struct sqlite3_stmt* pSt) {
-    int res = sqlite3_step(pSt);
+enum nss_status res2nss_status(int res, struct sqlite3* pDb, struct sqlite3_stmt* pSt) {
     switch(res) {
         /* Something was wrong with locks, try again later. */
         case SQLITE_BUSY:
             sqlite3_finalize(pSt);
             sqlite3_close(pDb);
-        return NSS_STATUS_TRYAGAIN;
+            return NSS_STATUS_TRYAGAIN;
         /* No row returned (?) */
+
         case SQLITE_DONE:
             sqlite3_finalize(pSt);
             sqlite3_close(pDb);
-        return NSS_STATUS_NOTFOUND;
+            return NSS_STATUS_NOTFOUND;
+
         case SQLITE_ROW:
             return NSS_STATUS_SUCCESS;
-        break;
+
         default:
             sqlite3_finalize(pSt);
             sqlite3_close(pDb);
@@ -148,8 +141,9 @@ enum nss_status fill_group(struct sqlite3 *pDb, struct group *gbuf, char* buf, s
     return res;
 }
 
+
 /*
- * Fill an user struct using given information.
+ * Fill a passwd struct using given information.
  * @param pwbuf Struct which will be filled with various info.
  * @param buf Buffer which will contain all strings pointed to by
  *      pwbuf.
@@ -161,8 +155,7 @@ enum nss_status fill_group(struct sqlite3 *pDb, struct group *gbuf, char* buf, s
  * @param gecos Extended information (real user name).
  * @param shell User's shell.
  * @param homedir User's home directory.
- * @param errnop Pointer to errno, will be filled if something goes
- *      wrong.
+ * @param errnop Pointer to errno, will be filled if something goes wrong.
  */
 
 enum nss_status fill_passwd(struct passwd* pwbuf, char* buf, size_t buflen,
@@ -200,3 +193,44 @@ enum nss_status fill_passwd(struct passwd* pwbuf, char* buf, size_t buflen,
     return NSS_STATUS_SUCCESS;
 }
 
+/*
+ * Fill an shadow password struct using given information.
+ * @param spbuf Struct which will be filled with various info.
+ * @param buf Buffer which will contain all strings pointed to by
+ *      pwbuf.
+ * @param buflen Buffer length.
+ * @param name Username.
+ * @param pw Encrypted password.
+ * @param lstchg Date of last change (measured in days since 1970-01-01 00:00:00 +0000 (UTC))
+ * @param min Min # of days between changes
+ * @param max Max # of days between changes
+ * @param warn # of days before password expires to warn user to change it
+ * @param inact # of days after password expires until account is disabled
+ * @param expire Date when account expires (measured in days since 1970-01-01 00:00:00 +0000 (UTC))
+ * @param errnop Pointer to errno, will be filled if something goes wrong.
+ */
+
+enum nss_status fill_shadow(struct spwd *spbuf, char* buf, size_t buflen,
+    const char* name, const char* pw, long lstchg, long min, long max, long warn,
+    long inact, long expire, int* errnop) {
+
+    int name_length = strlen(name) + 1;
+    int pw_length = strlen(pw) + 1;
+    if(buflen < name_length + pw_length) {
+        *errnop = ERANGE;
+        return NSS_STATUS_TRYAGAIN;
+    }
+    strcpy(buf, name);
+    spbuf->sp_namp = buf;
+    buf += name_length;
+    strcpy(buf, pw);
+    spbuf->sp_pwdp = buf;
+    spbuf->sp_lstchg = -1;
+    spbuf->sp_min = -1;
+    spbuf->sp_max = -1;
+    spbuf->sp_warn = -1;
+    spbuf->sp_inact = -1;
+    spbuf->sp_expire = -1;
+
+    return NSS_STATUS_SUCCESS;
+}
