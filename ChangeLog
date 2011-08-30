@@ -1,3 +1,11 @@
+2011-08-30 17:22 agamez
+
+	* AUTHORS, README, groups.c, passwd.c, utils.c, shadow.c, utils.h
+          conf/passwd.sql, conf/shadow.sql: First stage of Alvaro Gamez
+	  Machado's fork from original beuss' version. 
+	  Query customization capability.
+	  Non-essential bit of refactoring.
+
 2007-08-17 17:32  beuss
 
 	* AUTHORS, conf/shadow.sql, shadow.c: Integrating Sylvain Rochet's

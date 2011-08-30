@@ -1,15 +1,15 @@
-libnss-sqlite
-=============
+libnss-sqlite3
+==============
 
-libnss-sqlite is a library which can be used to provide authentication
-services using entries stored in a SQLite database. It has been tested
-on a system with ~5k users and ~6k groups and has pretty good perfs
+libnss-sqlite3 is a library which can be used to provide authentication
+services using entries stored in a SQLite database. Previous versions were
+tested on a system with ~5k users and ~6k groups and has pretty good perfs
 (less than one secon for an id xxxx). It is a good solution to mirror
 a remote authentication database periodicaly updated avoiding connection
 cost.
 
+This is a fork from original libnss-sqlite.
 Last version is available from libnss-sqlite.tuxfamily.org.
-Debian packages will be available soon.
 
  1. Prerequisites
 ------------------
@@ -45,4 +45,4 @@ more details about NSS configuration.
  4. Get more information
 -------------------------
 
-Consult the website at http://libnss-sqlite.tuxfamily.org.
+Consult the original pre-fork website at http://libnss-sqlite.tuxfamily.org.
