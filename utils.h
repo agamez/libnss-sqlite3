@@ -22,12 +22,13 @@
 #include <sqlite3.h>
 #include <grp.h>
 #include <pwd.h>
+#include <shadow.h>
 
-int open_and_prepare(sqlite3**, struct sqlite3_stmt**, const char*);
-int open_and_prepare_sp(sqlite3**, struct sqlite3_stmt**, const char*);
-int fetch_first(struct sqlite3*, struct sqlite3_stmt*);
+char *get_query(struct sqlite3*, char*);
 enum nss_status fill_passwd(struct passwd*, char*, size_t, const char*,
     const char*, uid_t, gid_t, const char*, const char*, const char*, int*);
+enum nss_status fill_shadow(struct spwd*, char*, size_t, const char*,
+    const char*, long, long, long, long, long, long, int*);
 enum nss_status fill_group(struct sqlite3*, struct group*, char*, size_t,
     const unsigned char*, const unsigned char*, gid_t, int*);
 
