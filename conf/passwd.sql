@@ -9,3 +9,5 @@ CREATE TABLE groups(gid INTEGER PRIMARY KEY, groupname TEXT NOT NULL, passwd TEX
 CREATE INDEX idx_groupname ON groups(groupname);
 
 CREATE TABLE queries(name TEXT PRIMARY KEY, query TEXT NOT NULL);
+INSERT INTO queries VALUES("getpwnam_r","SELECT uid, gid, shell, homedir FROM passwd WHERE username = ?");
+INSERT INTO queries VALUES("getpwuid_r","SELECT username, gid, shell, homedir FROM passwd WHERE uid = ?";
