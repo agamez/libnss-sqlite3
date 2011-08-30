@@ -421,15 +421,15 @@ enum nss_status get_users(sqlite3* pDb, gid_t gid, char* buffer, size_t buflen, 
 
     NSS_DEBUG("get_users: looking for members of group #%d\n", gid);
     
-    if(sqlite3_prepare(pDb, sql, strlen(sql), &pSt, NULL) != SQLITE_OK) {
-        NSS_ERROR(sqlite3_errmsg(pDb));
-        sqlite3_finalize(pSt);
-        return NSS_STATUS_UNAVAIL;
-    }
-
     if(!(sql = get_query(pDb, "get_users")) ) {
         NSS_ERROR(sqlite3_errmsg(pDb));
         sqlite3_close(pDb);
+        return NSS_STATUS_UNAVAIL;
+    }
+
+    if(sqlite3_prepare(pDb, sql, strlen(sql), &pSt, NULL) != SQLITE_OK) {
+        NSS_ERROR(sqlite3_errmsg(pDb));
+        sqlite3_finalize(pSt);
         return NSS_STATUS_UNAVAIL;
     }
 
