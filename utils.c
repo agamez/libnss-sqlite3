@@ -37,7 +37,7 @@
  */
 char *get_query(struct sqlite3* pDb, char *getent_function) {
     struct sqlite3_stmt* pSsql;
-    const char* sql = "SELECT query FROM queries WHERE name = ?";
+    const char* sql = "SELECT query FROM nss_queries WHERE name = ?";
     char *query;
     int res;
 
