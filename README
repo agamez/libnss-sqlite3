@@ -21,7 +21,10 @@ sudo sqlite3 -init conf/shadow.sql /var/db/shadow.sqlite
 sudo chmod o-r /var/db/shadow.sqlite
 
 That's all, databases are ready. Of course, it's up to you to populate them!
-Currently, there is no way to customise database fields and tables' names.
+Each database contains a table named 'queries'. Each record inside this table
+stores the query that should be performed in order to get the requested
+information. Please, refer to conf/passwd.sql and conf/shadow.sql to get an
+insight of the queries that can be customized and how to do it.
 
  2. Configure nsswitch.conf
 ----------------------------
