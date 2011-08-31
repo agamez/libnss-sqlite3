@@ -25,8 +25,7 @@
 #include <shadow.h>
 
 char *get_query(struct sqlite3*, char*);
-enum nss_status fill_passwd(struct passwd*, char*, size_t, const char*,
-    const char*, uid_t, gid_t, const char*, const char*, const char*, int*);
+enum nss_status fill_passwd_buf(struct passwd, char*, size_t, int*) ;
 enum nss_status fill_shadow(struct spwd*, char*, size_t, const char*,
     const char*, long, long, long, long, long, long, int*);
 enum nss_status fill_group(struct sqlite3*, struct group*, char*, size_t,

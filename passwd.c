@@ -116,9 +116,10 @@ _nss_sqlite_getpwent_r(struct passwd *pwbuf, char *buf,
     }
 
     if(pwent_data.try_again) {
-        res = fill_passwd(pwbuf, buf, buflen, pwent_data.pw_entry.pw_name, "x", pwent_data.pw_entry.pw_uid, pwent_data.pw_entry.pw_gid, "", pwent_data.pw_entry.pw_shell, pwent_data.pw_entry.pw_dir, errnop);
+        res = fill_passwd_buf(pwent_data.pw_entry, buf, buflen, errnop);
         /* buffer was long enough this time */
         if(res != NSS_STATUS_TRYAGAIN || (*errnop) != ERANGE) {
+            memcpy(pwbuf, &pwent_data.pw_entry, sizeof(pwent_data.pw_entry));
             pwent_data.try_again = 0;
             pthread_mutex_unlock(&pwent_mutex);
             return res;
@@ -133,19 +134,21 @@ _nss_sqlite_getpwent_r(struct passwd *pwbuf, char *buf,
     }
     pwent_data.pw_entry.pw_uid = sqlite3_column_int(pwent_data.pSt, 0);
     pwent_data.pw_entry.pw_name = sqlite3_column_text(pwent_data.pSt, 1);
-    pwent_data.pw_entry.pw_gid = sqlite3_column_int(pwent_data.pSt, 2);
-    pwent_data.pw_entry.pw_gecos = sqlite3_column_text(pwent_data.pSt, 3);
-    pwent_data.pw_entry.pw_dir = sqlite3_column_text(pwent_data.pSt, 4);
-    pwent_data.pw_entry.pw_shell = sqlite3_column_text(pwent_data.pSt, 5);
+    pwent_data.pw_entry.pw_passwd = sqlite3_column_text(pwent_data.pSt, 2);
+    pwent_data.pw_entry.pw_gid = sqlite3_column_int(pwent_data.pSt, 3);
+    pwent_data.pw_entry.pw_gecos = sqlite3_column_text(pwent_data.pSt, 4);
+    pwent_data.pw_entry.pw_dir = sqlite3_column_text(pwent_data.pSt, 5);
+    pwent_data.pw_entry.pw_shell = sqlite3_column_text(pwent_data.pSt, 6);
 
     NSS_DEBUG("getpwent_r: fetched user #%d: %s\n", uid, name);
 
-    res = fill_passwd(pwbuf, buf, buflen, pwent_data.pw_entry.pw_name, "x", pwent_data.pw_entry.pw_uid, pwent_data.pw_entry.pw_gid, "", pwent_data.pw_entry.pw_shell, pwent_data.pw_entry.pw_dir, errnop);
+    res = fill_passwd_buf(pwent_data.pw_entry, buf, buflen, errnop);
     if(res == NSS_STATUS_TRYAGAIN && (*errnop) == ERANGE) {
         pwent_data.try_again = 1;
         pthread_mutex_unlock(&pwent_mutex);
         return NSS_STATUS_TRYAGAIN;
     }
+    memcpy(pwbuf, &pwent_data.pw_entry, sizeof(pwent_data.pw_entry));
     pthread_mutex_unlock(&pwent_mutex);
     return NSS_STATUS_SUCCESS;
 }
@@ -160,11 +163,8 @@ enum nss_status _nss_sqlite_getpwnam_r(const char* name, struct passwd *pwbuf,
     sqlite3 *pDb;
     struct sqlite3_stmt* pSquery;
     int res;
-    uid_t uid;
-    gid_t gid;
+
     char* query;
-    const char* shell;
-    const char* homedir;
 
     NSS_DEBUG("getpwnam_r: Looking for user %s\n", name);
 
@@ -203,11 +203,15 @@ enum nss_status _nss_sqlite_getpwnam_r(const char* name, struct passwd *pwbuf,
     }
 
     /* SQLITE_ROW was returned, fetch data */
-    uid = sqlite3_column_int(pSquery, 0);
-    gid = sqlite3_column_int(pSquery, 1);
-    shell = sqlite3_column_text(pSquery, 2);
-    homedir = sqlite3_column_text(pSquery, 3);
-    res = fill_passwd(pwbuf, buf, buflen, name, "x", uid, gid, "", shell, homedir, errnop);
+    pwbuf->pw_uid = sqlite3_column_int(pSquery, 0);
+    pwbuf->pw_name = name;
+    pwbuf->pw_passwd = sqlite3_column_text(pSquery, 1);
+    pwbuf->pw_gid = sqlite3_column_int(pSquery, 2);
+    pwbuf->pw_gecos = sqlite3_column_text(pSquery, 3);
+    pwbuf->pw_dir = sqlite3_column_text(pSquery, 4);
+    pwbuf->pw_shell = sqlite3_column_text(pSquery, 5);
+
+    res = fill_passwd_buf(*pwbuf, buf, buflen, errnop);
 
     free(query);
     sqlite3_finalize(pSquery);
@@ -226,10 +230,6 @@ enum nss_status _nss_sqlite_getpwuid_r(uid_t uid, struct passwd *pwbuf,
     sqlite3 *pDb;
     struct sqlite3_stmt* pSquery;
     int res, nss_res;
-    gid_t gid;
-    const unsigned char *name;
-    const unsigned char *shell;
-    const unsigned char *homedir;
     char* query;
 
     NSS_DEBUG("getpwuid_r: looking for user #%d\n", uid);
@@ -271,18 +271,19 @@ enum nss_status _nss_sqlite_getpwuid_r(uid_t uid, struct passwd *pwbuf,
         return nss_res;
     }
 
+    pwbuf->pw_uid = uid;
+    pwbuf->pw_name = sqlite3_column_text(pSquery, 0);
+    pwbuf->pw_passwd = sqlite3_column_text(pSquery, 1);
+    pwbuf->pw_gid = sqlite3_column_int(pSquery, 2);
+    pwbuf->pw_gecos = sqlite3_column_text(pSquery, 3);
+    pwbuf->pw_dir = sqlite3_column_text(pSquery, 4);
+    pwbuf->pw_shell = sqlite3_column_text(pSquery, 5);
 
-    name = sqlite3_column_text(pSquery, 0);
-    gid = sqlite3_column_int(pSquery, 1);
-    shell = sqlite3_column_text(pSquery, 2);
-    homedir = sqlite3_column_text(pSquery, 3);
-
-    fill_passwd(pwbuf, buf, buflen, name, "x", uid, gid, "", shell, homedir, errnop);
+    res = fill_passwd_buf(*pwbuf, buf, buflen, errnop);
    
     free(query);
     sqlite3_finalize(pSquery);
     sqlite3_close(pDb);
 
-    return NSS_STATUS_SUCCESS;
+    return res;
 }
-
