@@ -29,7 +29,7 @@
 #include <string.h>
 
 /*
- * struct used to store data used by getgr_ent.
+ * struct used to store data used by getgrent.
  */
 static struct {
     sqlite3* pDb;
