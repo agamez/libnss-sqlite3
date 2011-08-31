@@ -29,12 +29,56 @@
 #include <pwd.h>
 #include <string.h>
 #include <unistd.h>
+#include <pthread.h>
+
+/*
+ * struct used to store data used by getpwent.
+ */
+static struct {
+    sqlite3* pDb;
+    sqlite3_stmt* pSt;
+    int try_again;      /* flag to know if NSS_TRYAGAIN
+                            was returned by previous call
+                            to getpwent_r */
+    /* user information cache used if NSS_TRYAGAIN was returned */
+    const unsigned char* name;
+    uid_t uid;
+    gid_t gid;
+    const unsigned char* shell;
+    const unsigned char* homedir;
+} pwent_data = { NULL, NULL, 0, NULL, 0, 0, NULL, NULL };
+
+/* mutex used to serialize xxpwent operation */
+pthread_mutex_t pwent_mutex = PTHREAD_RECURSIVE_MUTEX_INITIALIZER_NP;
+
 
 /**
  * Setup everything needed to retrieve passwd entries.
  */
 enum nss_status _nss_sqlite_setpwent(void) {
-    NSS_DEBUG("Initializing pw functions\n");
+    char* sql;
+    pthread_mutex_lock(&pwent_mutex);
+    if(pwent_data.pDb == NULL) {
+        NSS_DEBUG("setpwent: opening DB connection\n");
+        if(sqlite3_open(NSS_SQLITE_PASSWD_DB, &pwent_data.pDb) != SQLITE_OK) {
+            NSS_ERROR(sqlite3_errmsg(pwent_data.pDb));
+            return NSS_STATUS_UNAVAIL;
+        }
+        if(!(sql = get_query(pwent_data.pDb, "setpwent")) ) {
+            NSS_ERROR(sqlite3_errmsg(pwent_data.pDb));
+            sqlite3_close(pwent_data.pDb);
+            return NSS_STATUS_UNAVAIL;
+        }
+        if(sqlite3_prepare(pwent_data.pDb, sql, -1, &pwent_data.pSt, NULL) != SQLITE_OK) {
+            NSS_ERROR(sqlite3_errmsg(pwent_data.pDb));
+            sqlite3_finalize(pwent_data.pSt);
+            sqlite3_close(pwent_data.pDb);
+            free(sql);
+            return NSS_STATUS_UNAVAIL;
+        }
+    }
+    free(sql);
+    pthread_mutex_unlock(&pwent_mutex);
     return NSS_STATUS_SUCCESS;
 }
 
@@ -42,20 +86,82 @@ enum nss_status _nss_sqlite_setpwent(void) {
  * Free getpwent resources.
  */
 enum nss_status _nss_sqlite_endpwent(void) {
-    NSS_DEBUG("Finishing pw functions\n");
+    NSS_DEBUG("endpwent: finalizing passwd serial access facilities\n");
+    pthread_mutex_lock(&pwent_mutex);
+    if(pwent_data.pDb != NULL) {
+        sqlite3_finalize(pwent_data.pSt);
+        sqlite3_close(pwent_data.pDb);
+        pwent_data.pDb = NULL;
+    }
+    pthread_mutex_unlock(&pwent_mutex);
     return NSS_STATUS_SUCCESS;
 }
 
 /*
- * Return next passwd entry.
- * Not implemeted yet.
+ * Return next passwd entry. see man getpwent_r
+ * @param pwbuf Buffer to store passwd data.
+ * @param buf Buffer which will contain all string pointed
+ * to by pwbuf entries.
+ * @param buflen buf length.
+ * @param errnop Pointer to errno, will be filled if
+ * an error occurs.
  */
 
 enum nss_status
 _nss_sqlite_getpwent_r(struct passwd *pwbuf, char *buf,
                       size_t buflen, int *errnop) {
-    NSS_DEBUG("Getting next pw entry\n");
-    return NSS_STATUS_UNAVAIL;
+    int res;
+    const unsigned char* name;
+    uid_t uid;
+    gid_t gid;
+    const unsigned char* shell;
+    const unsigned char* homedir;
+    NSS_DEBUG("getpwent_r\n");
+    pthread_mutex_lock(&pwent_mutex);
+
+    if(pwent_data.pDb == NULL) {
+        _nss_sqlite_setpwent();
+    }
+
+    if(pwent_data.try_again) {
+        res = fill_passwd(pwbuf, buf, buflen, name, "x", uid, gid, "", shell, homedir, errnop);
+        /* buffer was long enough this time */
+        if(res != NSS_STATUS_TRYAGAIN || (*errnop) != ERANGE) {
+            pwent_data.try_again = 0;
+            pthread_mutex_unlock(&pwent_mutex);
+            return res;
+        }
+    }
+
+    res = res2nss_status(sqlite3_step(pwent_data.pSt), pwent_data.pDb, pwent_data.pSt);
+    if(res != NSS_STATUS_SUCCESS) {
+        pwent_data.pDb = NULL;
+        pthread_mutex_unlock(&pwent_mutex);
+        return res;
+    }
+    uid = sqlite3_column_int(pwent_data.pSt, 0);
+    gid = sqlite3_column_int(pwent_data.pSt, 1);
+    name = sqlite3_column_text(pwent_data.pSt, 2);
+    shell = sqlite3_column_text(pwent_data.pSt, 3);
+    homedir = sqlite3_column_text(pwent_data.pSt, 4);
+
+    NSS_DEBUG("getpwent_r: fetched user #%d: %s\n", uid, name);
+
+    res = fill_passwd(pwbuf, buf, buflen, name, "x", uid, gid, "", shell, homedir, errnop);
+    if(res == NSS_STATUS_TRYAGAIN && (*errnop) == ERANGE) {
+        /* cache result for next try */
+        pwent_data.uid = uid;
+        pwent_data.gid = gid;
+        pwent_data.name = name;
+        pwent_data.shell = shell;
+        pwent_data.homedir = homedir;
+        pwent_data.try_again = 1;
+
+        pthread_mutex_unlock(&pwent_mutex);
+        return NSS_STATUS_TRYAGAIN;
+    }
+    pthread_mutex_unlock(&pwent_mutex);
+    return NSS_STATUS_SUCCESS;
 }
 
 /**
