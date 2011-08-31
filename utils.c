@@ -143,20 +143,29 @@ enum nss_status fill_group(struct sqlite3 *pDb, struct group *gbuf, char* buf, s
 
 
 /*
- * Fill a passwd buffer from a passwd struct already filled.
- * @param pw_entry Struct which is filled with various info.
+ * Fill a passwd struct using given information.
+ * @param pwbuf Struct which will be filled with various info.
  * @param buf Buffer which will contain all strings pointed to by
  *      pwbuf.
  * @param buflen Buffer length.
+ * @param name Username.
+ * @param pw Group password.
+ * @param uid User ID.
+ * @param gid Main group ID.
+ * @param gecos Extended information (real user name).
+ * @param shell User's shell.
+ * @param homedir User's home directory.
  * @param errnop Pointer to errno, will be filled if something goes wrong.
  */
 
-enum nss_status fill_passwd_buf(struct passwd pw_entry, char* buf, size_t buflen, int* errnop) {
-    int name_length = strlen(pw_entry.pw_name) + 1;
-    int pw_length = strlen(pw_entry.pw_passwd) + 1;
-    int gecos_length = strlen(pw_entry.pw_gecos) + 1;
-    int homedir_length = strlen(pw_entry.pw_dir) + 1;
-    int shell_length = strlen(pw_entry.pw_shell) + 1;
+enum nss_status fill_passwd(struct passwd* pwbuf, char* buf, size_t buflen,
+    const char* name, const char* pw, uid_t uid, gid_t gid, const char* gecos,
+    const char* shell, const char* homedir, int* errnop) {
+    int name_length = strlen(name) + 1;
+    int pw_length = strlen(pw) + 1;
+    int gecos_length = strlen(gecos) + 1;
+    int shell_length = strlen(shell) + 1;
+    int homedir_length = strlen(homedir) + 1;
     int total_length = name_length + pw_length + gecos_length + shell_length + homedir_length;
 
     if(buflen < total_length) {
@@ -164,19 +173,22 @@ enum nss_status fill_passwd_buf(struct passwd pw_entry, char* buf, size_t buflen
         return NSS_STATUS_TRYAGAIN;
     }
 
-    strcpy(buf, pw_entry.pw_name);
-
+    pwbuf->pw_uid = uid;
+    pwbuf->pw_gid = gid;
+    strcpy(buf, name);
+    pwbuf->pw_name = buf;
     buf += name_length;
-    strcpy(buf, pw_entry.pw_passwd);
-
+    strcpy(buf, pw);
+    pwbuf->pw_passwd = buf;
     buf += pw_length;
-    strcpy(buf, pw_entry.pw_gecos);
-
+    strcpy(buf, gecos);
+    pwbuf->pw_gecos = buf;
     buf += gecos_length;
-    strcpy(buf, pw_entry.pw_shell);
-
+    strcpy(buf, shell);
+    pwbuf->pw_shell = buf;
     buf += shell_length;
-    strcpy(buf, pw_entry.pw_dir);
+    strcpy(buf, homedir);
+    pwbuf->pw_dir = buf;
 
     return NSS_STATUS_SUCCESS;
 }

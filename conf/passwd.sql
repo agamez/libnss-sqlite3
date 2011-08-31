@@ -1,4 +1,4 @@
-CREATE TABLE passwd(uid INTEGER PRIMARY KEY, username TEXT NOT NULL, passwd TEXT NOT NULL default 'x', gid INTEGER, gecos TEXT NOT NULL default ',,,', homedir TEXT NOT NULL, shell TEXT NOT NULL);
+CREATE TABLE passwd(uid INTEGER PRIMARY KEY, username TEXT NOT NULL, gid INTEGER, gecos TEXT NOT NULL default ',,,', homedir TEXT NOT NULL, shell TEXT NOT NULL);
 CREATE INDEX idx_passwd_username ON passwd(username);
 
 CREATE TABLE user_group(uid INTEGER, gid INTEGER, CONSTRAINT pk_user_groups PRIMARY KEY(uid, gid));
@@ -9,9 +9,9 @@ CREATE TABLE groups(gid INTEGER PRIMARY KEY, groupname TEXT NOT NULL, passwd TEX
 CREATE INDEX idx_groupname ON groups(groupname);
 
 CREATE TABLE nss_queries(name TEXT PRIMARY KEY, query TEXT NOT NULL);
-INSERT INTO nss_queries VALUES("setpwent", "SELECT uid, username, passwd, gid, gecos, homedir, shell FROM passwd;");
-INSERT INTO nss_queries VALUES("getpwnam_r","SELECT uid, passwd, gid, gecos, homedir, shell FROM passwd WHERE username = ?");
-INSERT INTO nss_queries VALUES("getpwuid_r","SELECT username, passwd, gid, gecos, homedir, shell FROM passwd WHERE uid = ?;");
+INSERT INTO nss_queries VALUES("setpwent", "SELECT uid, username, gid, gecos, homedir, shell FROM passwd;");
+INSERT INTO nss_queries VALUES("getpwnam_r","SELECT uid, gid, shell, homedir FROM passwd WHERE username = ?");
+INSERT INTO nss_queries VALUES("getpwuid_r","SELECT username, gid, shell, homedir FROM passwd WHERE uid = ?");
 
 
 INSERT INTO nss_queries VALUES("setgrent", "SELECT gid, groupname, passwd FROM groups");
