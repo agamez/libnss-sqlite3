@@ -148,24 +148,17 @@ enum nss_status fill_group(struct sqlite3 *pDb, struct group *gbuf, char* buf, s
  * @param buf Buffer which will contain all strings pointed to by
  *      pwbuf.
  * @param buflen Buffer length.
- * @param name Username.
- * @param pw Group password.
- * @param uid User ID.
- * @param gid Main group ID.
- * @param gecos Extended information (real user name).
- * @param shell User's shell.
- * @param homedir User's home directory.
+ * @param entry Passwd entry with needed data.
  * @param errnop Pointer to errno, will be filled if something goes wrong.
  */
 
-enum nss_status fill_passwd(struct passwd* pwbuf, char* buf, size_t buflen,
-    const char* name, const char* pw, uid_t uid, gid_t gid, const char* gecos,
-    const char* shell, const char* homedir, int* errnop) {
-    int name_length = strlen(name) + 1;
-    int pw_length = strlen(pw) + 1;
-    int gecos_length = strlen(gecos) + 1;
-    int shell_length = strlen(shell) + 1;
-    int homedir_length = strlen(homedir) + 1;
+enum nss_status fill_passwd(struct passwd* pwbuf, char* buf, size_t buflen, struct passwd entry, int* errnop) {
+    int name_length = strlen(entry.pw_name) + 1;
+    int pw_length = strlen(entry.pw_passwd) + 1;
+    int gecos_length = strlen(entry.pw_gecos) + 1;
+    int homedir_length = strlen(entry.pw_dir) + 1;
+    int shell_length = strlen(entry.pw_shell) + 1;
+
     int total_length = name_length + pw_length + gecos_length + shell_length + homedir_length;
 
     if(buflen < total_length) {
@@ -173,25 +166,44 @@ enum nss_status fill_passwd(struct passwd* pwbuf, char* buf, size_t buflen,
         return NSS_STATUS_TRYAGAIN;
     }
 
-    pwbuf->pw_uid = uid;
-    pwbuf->pw_gid = gid;
-    strcpy(buf, name);
+    pwbuf->pw_uid = entry.pw_uid;
+    pwbuf->pw_gid = entry.pw_gid;
+
+    strcpy(buf, entry.pw_name);
     pwbuf->pw_name = buf;
     buf += name_length;
-    strcpy(buf, pw);
+
+    strcpy(buf, entry.pw_passwd);
     pwbuf->pw_passwd = buf;
     buf += pw_length;
-    strcpy(buf, gecos);
+
+    strcpy(buf, entry.pw_gecos);
     pwbuf->pw_gecos = buf;
     buf += gecos_length;
-    strcpy(buf, shell);
-    pwbuf->pw_shell = buf;
-    buf += shell_length;
-    strcpy(buf, homedir);
+
+    strcpy(buf, entry.pw_dir);
     pwbuf->pw_dir = buf;
+    buf += homedir_length;
+
+    strcpy(buf, entry.pw_shell);
+    pwbuf->pw_shell = buf;
+
 
     return NSS_STATUS_SUCCESS;
 }
+
+inline void fill_passwd_sql(struct passwd* entry, struct sqlite3_stmt* pSquery) {
+    entry->pw_name = sqlite3_column_text(pSquery, 0);
+    entry->pw_passwd = sqlite3_column_text(pSquery, 1);
+    entry->pw_uid = sqlite3_column_int(pSquery, 2);
+    entry->pw_gid =sqlite3_column_int(pSquery, 3);
+    entry->pw_gecos = sqlite3_column_text(pSquery, 4);
+    entry->pw_dir = sqlite3_column_text(pSquery, 5);
+    entry->pw_shell = sqlite3_column_text(pSquery, 6);
+
+    return;
+}
+
 
 /*
  * Fill an shadow password struct using given information.

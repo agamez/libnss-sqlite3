@@ -41,12 +41,8 @@ static struct {
                             was returned by previous call
                             to getpwent_r */
     /* user information cache used if NSS_TRYAGAIN was returned */
-    const unsigned char* name;
-    uid_t uid;
-    gid_t gid;
-    const unsigned char* shell;
-    const unsigned char* homedir;
-} pwent_data = { NULL, NULL, 0, NULL, 0, 0, NULL, NULL };
+    struct passwd entry;
+} pwent_data = { NULL, NULL, 0, NULL};
 
 /* mutex used to serialize xxpwent operation */
 pthread_mutex_t pwent_mutex = PTHREAD_RECURSIVE_MUTEX_INITIALIZER_NP;
@@ -124,7 +120,7 @@ _nss_sqlite_getpwent_r(struct passwd *pwbuf, char *buf,
     }
 
     if(pwent_data.try_again) {
-        res = fill_passwd(pwbuf, buf, buflen, name, "x", uid, gid, "", shell, homedir, errnop);
+        res = fill_passwd(pwbuf, buf, buflen, pwent_data.entry, errnop);
         /* buffer was long enough this time */
         if(res != NSS_STATUS_TRYAGAIN || (*errnop) != ERANGE) {
             pwent_data.try_again = 0;
@@ -139,22 +135,14 @@ _nss_sqlite_getpwent_r(struct passwd *pwbuf, char *buf,
         pthread_mutex_unlock(&pwent_mutex);
         return res;
     }
-    uid = sqlite3_column_int(pwent_data.pSt, 0);
-    gid = sqlite3_column_int(pwent_data.pSt, 1);
-    name = sqlite3_column_text(pwent_data.pSt, 2);
-    shell = sqlite3_column_text(pwent_data.pSt, 3);
-    homedir = sqlite3_column_text(pwent_data.pSt, 4);
+
+    fill_passwd_sql(&pwent_data.entry, pwent_data.pSt);
+    res = fill_passwd(pwbuf, buf, buflen, pwent_data.entry, errnop);
 
     NSS_DEBUG("getpwent_r: fetched user #%d: %s\n", uid, name);
 
-    res = fill_passwd(pwbuf, buf, buflen, name, "x", uid, gid, "", shell, homedir, errnop);
     if(res == NSS_STATUS_TRYAGAIN && (*errnop) == ERANGE) {
         /* cache result for next try */
-        pwent_data.uid = uid;
-        pwent_data.gid = gid;
-        pwent_data.name = name;
-        pwent_data.shell = shell;
-        pwent_data.homedir = homedir;
         pwent_data.try_again = 1;
 
         pthread_mutex_unlock(&pwent_mutex);
@@ -173,12 +161,9 @@ enum nss_status _nss_sqlite_getpwnam_r(const char* name, struct passwd *pwbuf,
                char *buf, size_t buflen, int *errnop) {
     sqlite3 *pDb;
     struct sqlite3_stmt* pSquery;
-    int res;
-    uid_t uid;
-    gid_t gid;
     char* query;
-    const char* shell;
-    const char* homedir;
+    int res;
+    struct passwd entry;
 
     NSS_DEBUG("getpwnam_r: Looking for user %s\n", name);
 
@@ -216,12 +201,8 @@ enum nss_status _nss_sqlite_getpwnam_r(const char* name, struct passwd *pwbuf,
         return res;
     }
 
-    /* SQLITE_ROW was returned, fetch data */
-    uid = sqlite3_column_int(pSquery, 0);
-    gid = sqlite3_column_int(pSquery, 1);
-    shell = sqlite3_column_text(pSquery, 2);
-    homedir = sqlite3_column_text(pSquery, 3);
-    res = fill_passwd(pwbuf, buf, buflen, name, "x", uid, gid, "", shell, homedir, errnop);
+    fill_passwd_sql(&entry, pSquery);
+    res = fill_passwd(pwbuf, buf, buflen, entry, errnop);
 
     free(query);
     sqlite3_finalize(pSquery);
@@ -239,12 +220,9 @@ enum nss_status _nss_sqlite_getpwuid_r(uid_t uid, struct passwd *pwbuf,
                char *buf, size_t buflen, int *errnop) {
     sqlite3 *pDb;
     struct sqlite3_stmt* pSquery;
-    int res, nss_res;
-    gid_t gid;
-    const unsigned char *name;
-    const unsigned char *shell;
-    const unsigned char *homedir;
     char* query;
+    int res, nss_res;
+    struct passwd entry;
 
     NSS_DEBUG("getpwuid_r: looking for user #%d\n", uid);
 
@@ -285,18 +263,13 @@ enum nss_status _nss_sqlite_getpwuid_r(uid_t uid, struct passwd *pwbuf,
         return nss_res;
     }
 
-
-    name = sqlite3_column_text(pSquery, 0);
-    gid = sqlite3_column_int(pSquery, 1);
-    shell = sqlite3_column_text(pSquery, 2);
-    homedir = sqlite3_column_text(pSquery, 3);
-
-    fill_passwd(pwbuf, buf, buflen, name, "x", uid, gid, "", shell, homedir, errnop);
+    fill_passwd_sql(&entry, pSquery);
+    res = fill_passwd(pwbuf, buf, buflen, entry, errnop);
    
     free(query);
     sqlite3_finalize(pSquery);
     sqlite3_close(pDb);
 
-    return NSS_STATUS_SUCCESS;
+    return res;
 }
 
