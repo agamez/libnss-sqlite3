@@ -20,7 +20,9 @@ else
 CROSS= --build $(DEB_BUILD_GNU_TYPE)
 endif
 
-
+configure: bootstrap.sh
+	dh_testdir
+	./bootstrap.sh
 
 config.status: configure
 	dh_testdir
