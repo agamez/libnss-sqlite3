@@ -222,27 +222,42 @@ inline void fill_passwd_sql(struct passwd* entry, struct sqlite3_stmt* pSquery) 
  * @param errnop Pointer to errno, will be filled if something goes wrong.
  */
 
-enum nss_status fill_shadow(struct spwd *spbuf, char* buf, size_t buflen,
-    const char* name, const char* pw, long lstchg, long min, long max, long warn,
-    long inact, long expire, int* errnop) {
+enum nss_status fill_shadow(struct spwd *spbuf, char* buf, size_t buflen, struct spwd entry, int* errnop) {
 
-    int name_length = strlen(name) + 1;
-    int pw_length = strlen(pw) + 1;
+    int name_length = strlen(entry.sp_namp) + 1;
+    int pw_length = strlen(entry.sp_pwdp) + 1;
+
     if(buflen < name_length + pw_length) {
         *errnop = ERANGE;
         return NSS_STATUS_TRYAGAIN;
     }
-    strcpy(buf, name);
+
+    strcpy(buf, entry.sp_namp);
     spbuf->sp_namp = buf;
     buf += name_length;
-    strcpy(buf, pw);
+
+    strcpy(buf, entry.sp_pwdp);
     spbuf->sp_pwdp = buf;
-    spbuf->sp_lstchg = -1;
-    spbuf->sp_min = -1;
-    spbuf->sp_max = -1;
-    spbuf->sp_warn = -1;
-    spbuf->sp_inact = -1;
-    spbuf->sp_expire = -1;
+
+    spbuf->sp_lstchg = entry.sp_lstchg;
+    spbuf->sp_min = entry.sp_min;
+    spbuf->sp_max = entry.sp_max;
+    spbuf->sp_warn = entry.sp_warn;
+    spbuf->sp_inact = entry.sp_inact;
+    spbuf->sp_expire = entry.sp_expire;
 
     return NSS_STATUS_SUCCESS;
+}
+
+inline void fill_shadow_sql(struct spwd* entry, struct sqlite3_stmt* pSquery) {
+    entry->sp_namp = sqlite3_column_text(pSquery, 0);
+    entry->sp_pwdp = sqlite3_column_text(pSquery, 1);
+    entry->sp_lstchg = sqlite3_column_int(pSquery, 2);
+    entry->sp_min = sqlite3_column_int(pSquery, 3);
+    entry->sp_max = sqlite3_column_int(pSquery, 4);
+    entry->sp_warn = sqlite3_column_int(pSquery, 5);
+    entry->sp_inact = sqlite3_column_int(pSquery, 6);
+    entry->sp_expire = sqlite3_column_int(pSquery, 6);
+
+    return;
 }

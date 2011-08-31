@@ -39,9 +39,9 @@
 enum nss_status _nss_sqlite_getspnam_r(const char* name, struct spwd *spbuf,
                char *buf, size_t buflen, int *errnop) {
     sqlite3 *pDb;
-    const unsigned char* pw;
     struct sqlite3_stmt* pSquery;
     int res;
+    struct spwd entry;
     char* query;
 
     NSS_DEBUG("getspnam_r: looking for user %s (shadow)\n", name);
@@ -82,17 +82,12 @@ enum nss_status _nss_sqlite_getspnam_r(const char* name, struct spwd *spbuf,
         return res;
     }
 
-
-    /* SQLITE_ROW was returned, fetch data */
-    pw = sqlite3_column_text(pSquery, 0);
-
-    fill_shadow(spbuf, buf, buflen, name, pw, -1, -1, -1, -1, -1, -1, errnop);
+    fill_shadow_sql(&entry, pSquery);
+    res = fill_shadow(spbuf, buf, buflen, entry, errnop);
 
     free(query);
     sqlite3_finalize(pSquery);
     sqlite3_close(pDb);
 
-    return NSS_STATUS_SUCCESS;
+    return res;
 }
-
-

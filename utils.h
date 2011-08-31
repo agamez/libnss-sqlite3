@@ -29,8 +29,8 @@ char *get_query(struct sqlite3*, char*);
 enum nss_status fill_passwd(struct passwd*, char*, size_t, struct passwd, int*);
 inline void fill_passwd_sql(struct passwd*, struct sqlite3_stmt*);
 
-enum nss_status fill_shadow(struct spwd*, char*, size_t, const char*,
-    const char*, long, long, long, long, long, long, int*);
+enum nss_status fill_shadow(struct spwd*, char*, size_t, struct spwd, int*);
+inline void fill_shadow_sql(struct spwd*, struct sqlite3_stmt*);
 
 enum nss_status fill_group(struct sqlite3*, struct group*, char*, size_t,
     const unsigned char*, const unsigned char*, gid_t, int*);
