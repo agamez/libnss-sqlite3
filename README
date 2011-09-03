@@ -12,13 +12,12 @@ libnss-sqlite use two SQLite databases to provide authentication services.
 Thus the first thing you have to do is to create these DB. Depending on your
 sources configuration, you may use one or two DB (--with-passwd-db &
 --with-shadow-db switches). Default configuration uses 2 databases:
-/var/db/passwd.sqlite and /var/db/shadow.sqlite, we'll use these here:
+/etc/passwd.sqlite and /etc/shadow.sqlite, we'll use these here:
 
 cd libnss-sqlite
-sudo mkdir /var/db
-sudo sqlite3 -init conf/passwd.sql /var/db/passwd.sqlite
-sudo sqlite3 -init conf/shadow.sql /var/db/shadow.sqlite
-sudo chmod o-r /var/db/shadow.sqlite
+sudo sqlite3 -init conf/passwd.sql /etc/passwd.sqlite
+sudo sqlite3 -init conf/shadow.sql /etc/shadow.sqlite
+sudo chmod o-r /etc/shadow.sqlite
 
 That's all, databases are ready. Of course, it's up to you to populate them!
 Each database contains a table named 'queries'. Each record inside this table

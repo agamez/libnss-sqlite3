@@ -1,3 +1,9 @@
+2011-09-3 12:15 agamez
+	* AUTHORS, README, groups.c, passwd.c, utils.c, shadow.c, utils.h
+	  conf/passwd.sql, conf/shadow.sql: More deep refactorization of
+	  previous code.
+	* configure.ac: Set /etc as default directory for databases.
+
 2011-08-30 17:22 agamez
 
 	* AUTHORS, README, groups.c, passwd.c, utils.c, shadow.c, utils.h
