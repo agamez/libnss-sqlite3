@@ -139,9 +139,8 @@ _nss_sqlite_getgrent_r(struct group *gbuf, char *buf,
         pthread_mutex_unlock(&grent_mutex);
         return res;
     }
-    grent_data.entry.gr_gid = sqlite3_column_int(grent_data.pSt, 0);
-    grent_data.entry.gr_name = sqlite3_column_text(grent_data.pSt, 1);
-    grent_data.entry.gr_passwd = sqlite3_column_text(grent_data.pSt, 2);
+
+    fill_group_sql(&grent_data.entry, grent_data.pSt);
     NSS_DEBUG("getgrent_r: fetched group #%d: %s\n", grent_data.entry.gr_gid, grent_data.entry.gr_name);
 
     res = fill_group(grent_data.pDb, gbuf, buf, buflen, grent_data.entry, errnop);
@@ -211,9 +210,7 @@ _nss_sqlite_getgrnam_r(const char* name, struct group *gbuf,
         return res;
     }
 
-    entry.gr_gid = sqlite3_column_int(pSt, 0);
-    entry.gr_name = sqlite3_column_text(pSt, 1);
-    entry.gr_passwd = sqlite3_column_text(pSt, 2);
+    fill_group_sql(&entry, pSt);
 
     res = fill_group(pDb, gbuf, buf, buflen, entry, errnop);
 
@@ -278,9 +275,8 @@ _nss_sqlite_getgrgid_r(gid_t gid, struct group *gbuf,
         free(sql);
         return res;
     }
-    entry.gr_gid = sqlite3_column_int(pSt, 0);
-    entry.gr_name = sqlite3_column_text(pSt, 1);
-    entry.gr_passwd = sqlite3_column_text(pSt, 2);
+
+    fill_group_sql(&entry, pSt);
 
     res = fill_group(pDb, gbuf, buf, buflen, entry, errnop);
 

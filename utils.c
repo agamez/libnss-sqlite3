@@ -142,6 +142,15 @@ enum nss_status fill_group(struct sqlite3 *pDb, struct group *gbuf, char* buf, s
     return res;
 }
 
+inline void fill_group_sql(struct group* entry, struct sqlite3_stmt* pSquery) {
+    entry->gr_gid = sqlite3_column_int(pSquery, 0);
+    entry->gr_name = sqlite3_column_text(pSquery, 1);
+    entry->gr_passwd = sqlite3_column_text(pSquery, 2);
+
+    return;
+}
+
+
 
 /*
  * Fill a passwd struct using given information.
