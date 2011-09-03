@@ -32,7 +32,6 @@ inline void fill_passwd_sql(struct passwd*, struct sqlite3_stmt*);
 enum nss_status fill_shadow(struct spwd*, char*, size_t, struct spwd, int*);
 inline void fill_shadow_sql(struct spwd*, struct sqlite3_stmt*);
 
-enum nss_status fill_group(struct sqlite3*, struct group*, char*, size_t,
-    const unsigned char*, const unsigned char*, gid_t, int*);
+enum nss_status fill_group(struct sqlite3 *, struct group *, char*, size_t, struct group, int *);
 
 #endif

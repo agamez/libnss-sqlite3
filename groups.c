@@ -38,10 +38,8 @@ static struct {
                             was returned by previous call
                             to getgrent_r */
     /* group information cache used if NSS_TRYAGAIN was returned */
-    gid_t gid;
-    const unsigned char *groupname;
-    const unsigned char *pw;
-} grent_data = { NULL, NULL, 0, 0, NULL, NULL };
+    struct group entry;
+} grent_data = { NULL, NULL, 0, NULL};
 
 /* mutex used to serialize xxgrent operation */
 pthread_mutex_t grent_mutex = PTHREAD_RECURSIVE_MUTEX_INITIALIZER_NP;
@@ -118,9 +116,6 @@ enum nss_status
 _nss_sqlite_getgrent_r(struct group *gbuf, char *buf,
                       size_t buflen, int *errnop) {
     int res;
-    const unsigned char* name;
-    const unsigned char* pw;
-    gid_t gid;
     NSS_DEBUG("getgrent_r\n");
     pthread_mutex_lock(&grent_mutex);
 
@@ -129,7 +124,7 @@ _nss_sqlite_getgrent_r(struct group *gbuf, char *buf,
     }
 
     if(grent_data.try_again) {
-        res = fill_group(grent_data.pDb, gbuf, buf, buflen, name, pw, gid, errnop);
+        res = fill_group(grent_data.pDb, gbuf, buf, buflen, grent_data.entry, errnop);
         /* buffer was long enough this time */
         if(res != NSS_STATUS_TRYAGAIN || (*errnop) != ERANGE) {
             grent_data.try_again = 0;
@@ -144,18 +139,16 @@ _nss_sqlite_getgrent_r(struct group *gbuf, char *buf,
         pthread_mutex_unlock(&grent_mutex);
         return res;
     }
-    gid = sqlite3_column_int(grent_data.pSt, 0);
-    name = sqlite3_column_text(grent_data.pSt, 1);
-    pw = sqlite3_column_text(grent_data.pSt, 2);
-    NSS_DEBUG("getgrent_r: fetched group #%d: %s\n", gid, name);
+    grent_data.entry.gr_gid = sqlite3_column_int(grent_data.pSt, 0);
+    grent_data.entry.gr_name = sqlite3_column_text(grent_data.pSt, 1);
+    grent_data.entry.gr_passwd = sqlite3_column_text(grent_data.pSt, 2);
+    NSS_DEBUG("getgrent_r: fetched group #%d: %s\n", grent_data.entry.gr_gid, grent_data.entry.gr_name);
 
-    res = fill_group(grent_data.pDb, gbuf, buf, buflen, name, pw, gid, errnop);
+    res = fill_group(grent_data.pDb, gbuf, buf, buflen, grent_data.entry, errnop);
     if(res == NSS_STATUS_TRYAGAIN && (*errnop) == ERANGE) {
         /* cache result for next try */
-        grent_data.groupname = name;
-        grent_data.pw = pw;
-        grent_data.gid = gid;
         grent_data.try_again = 1;
+
         pthread_mutex_unlock(&grent_mutex);
         return NSS_STATUS_TRYAGAIN;
     }
@@ -178,8 +171,7 @@ _nss_sqlite_getgrnam_r(const char* name, struct group *gbuf,
                       char *buf, size_t buflen, int *errnop) {
     sqlite3 *pDb;
     struct sqlite3_stmt* pSt;
-    const unsigned char* pw;
-    gid_t gid;
+    struct group entry;
     int res;
     char* sql;
 
@@ -219,9 +211,11 @@ _nss_sqlite_getgrnam_r(const char* name, struct group *gbuf,
         return res;
     }
 
-    gid = sqlite3_column_int(pSt, 0);
-    pw = sqlite3_column_text(pSt, 1);
-    res = fill_group(pDb, gbuf, buf, buflen, (unsigned char*)name, pw, gid, errnop);
+    entry.gr_gid = sqlite3_column_int(pSt, 0);
+    entry.gr_name = sqlite3_column_text(pSt, 1);
+    entry.gr_passwd = sqlite3_column_text(pSt, 2);
+
+    res = fill_group(pDb, gbuf, buf, buflen, entry, errnop);
 
     sqlite3_finalize(pSt);
     sqlite3_close(pDb);
@@ -243,9 +237,8 @@ enum nss_status
 _nss_sqlite_getgrgid_r(gid_t gid, struct group *gbuf,
                       char *buf, size_t buflen, int *errnop) {
      sqlite3 *pDb;
-     const unsigned char* name;
-     const unsigned char* pw;
      struct sqlite3_stmt* pSt;
+     struct group entry;
      int res;
      char* sql;
 
@@ -285,9 +278,11 @@ _nss_sqlite_getgrgid_r(gid_t gid, struct group *gbuf,
         free(sql);
         return res;
     }
-    name = sqlite3_column_text(pSt, 0);
-    pw = sqlite3_column_text(pSt, 1);
-    res = fill_group(pDb, gbuf, buf, buflen, name, pw, gid, errnop);
+    entry.gr_gid = sqlite3_column_int(pSt, 0);
+    entry.gr_name = sqlite3_column_text(pSt, 1);
+    entry.gr_passwd = sqlite3_column_text(pSt, 2);
+
+    res = fill_group(pDb, gbuf, buf, buflen, entry, errnop);
 
     sqlite3_finalize(pSt);
     sqlite3_close(pDb);

@@ -112,10 +112,9 @@ enum nss_status res2nss_status(int res, struct sqlite3* pDb, struct sqlite3_stmt
  *      wrong.
  */
 
-enum nss_status fill_group(struct sqlite3 *pDb, struct group *gbuf, char* buf, size_t buflen,
-    const unsigned char *name, const unsigned char *pw, gid_t gid, int *errnop) {
-    int name_length = strlen((char*)name) + 1;
-    int pw_length = strlen((char*)pw) + 1;
+enum nss_status fill_group(struct sqlite3 *pDb, struct group *gbuf, char* buf, size_t buflen, struct group entry, int *errnop) {
+    int name_length = strlen((char*)entry.gr_name) + 1;
+    int pw_length = strlen((char*)entry.gr_passwd) + 1;
     int total_length = name_length + pw_length;
     int res;
 
@@ -124,12 +123,14 @@ enum nss_status fill_group(struct sqlite3 *pDb, struct group *gbuf, char* buf, s
         return NSS_STATUS_TRYAGAIN;
     }
 
-    strcpy(buf, (const char*)name);
+    gbuf->gr_gid = entry.gr_gid;
+
+    strcpy(buf, (const char*)entry.gr_name);
     gbuf->gr_name = buf;
     buf += name_length;
-    strcpy(buf, (const char*)pw);
+
+    strcpy(buf, (const char*)entry.gr_passwd);
     gbuf->gr_passwd = buf;
-    gbuf->gr_gid = gid;
     buf += pw_length;
 
     /* We have a group, we now need to fetch its users */
